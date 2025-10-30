@@ -87,10 +87,6 @@ A level-based hyper-casual puzzle game with strategic move limits and satisfying
 - GitHub: @KomanMehmet (https://github.com/KomanMehmet?tab=repositories)
 - LinkedIn: https://www.linkedin.com/in/mehmet-koman-gamedev92/
 
-## 📄 License
-
-Created for **Rollic Game Jam 2024**
-
 ---
 
 ⭐ **Made with Unity & UniTask**
