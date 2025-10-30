@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Level_01
   m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Data.LevelData
   levelNumber: 1
-  levelName: Level 1
+  levelName: Easy Start
   gridSize: 8
-  maxMoves: 20
-  targetScore: 1000
-  twoStarScore: 1500
-  threeStarScore: 2000
+  maxMoves: 55
+  targetScore: 200
+  twoStarScore: 700
+  threeStarScore: 1200
   availableColors: 000000000100000002000000
   powerUpsEnabled: 0
   powerUpSpawnRate: 5

@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9046368a213f4ea8869c58b7cb422182, type: 3}
   m_Name: GreenBallData
   m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Data.BallData
-  ballColor: 0
-  color: {r: 1, g: 1, b: 1, a: 1}
+  ballColor: 2
+  color: {r: 0, g: 1, b: 0.010393143, a: 1}
   ballSprite: {fileID: 0}
   pointValue: 10
   spawnWeight: 1

@@ -237,5 +237,44 @@ namespace _Project.Scripts.Systems.Grid
                 }
             }
         }
+        
+        public void ClearCell(Vector2Int gridPos)
+        {
+            if (!IsValidPosition(gridPos))
+            {
+                Debug.LogWarning($"[GridManager] Invalid position: {gridPos}");
+                return;
+            }
+
+            _grid[gridPos.x, gridPos.y].ClearBall();
+        }
+        
+        public void SetBallToCell(Vector2Int gridPos, Ball ball)
+        {
+            if (!IsValidPosition(gridPos))
+            {
+                Debug.LogWarning($"[GridManager] Invalid position: {gridPos}");
+                return;
+            }
+
+            _grid[gridPos.x, gridPos.y].SetBall(ball);
+        }
+        
+        public void SwapCells(Vector2Int pos1, Vector2Int pos2)
+        {
+            if (!IsValidPosition(pos1) || !IsValidPosition(pos2))
+            {
+                Debug.LogWarning($"[GridManager] Invalid swap positions: {pos1}, {pos2}");
+                return;
+            }
+
+            // İki ball'ı al
+            Ball ball1 = _grid[pos1.x, pos1.y].OccupyingBall;
+            Ball ball2 = _grid[pos2.x, pos2.y].OccupyingBall;
+
+            // Swap
+            _grid[pos1.x, pos1.y].SetBall(ball2);
+            _grid[pos2.x, pos2.y].SetBall(ball1);
+        }
     }
 }

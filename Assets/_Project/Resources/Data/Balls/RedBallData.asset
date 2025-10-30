@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RedBallData
   m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Data.BallData
   ballColor: 0
-  color: {r: 1, g: 1, b: 1, a: 1}
+  color: {r: 1, g: 0, b: 0, a: 1}
   ballSprite: {fileID: 0}
   pointValue: 10
   spawnWeight: 1
