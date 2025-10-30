@@ -1,5 +1,7 @@
-﻿using _Project.Scripts.Gameplay.Ball;
+﻿using System.Collections.Generic;
+using _Project.Scripts.Gameplay.Ball;
 using _Project.Scripts.Systems.Grid;
+using _Project.Scripts.Systems.Match;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -9,26 +11,26 @@ namespace _Project.Scripts.Systems.Input
     public class InputHandler : MonoBehaviour
     {
         public static InputHandler Instance { get; private set; }
-        
-        [Header("Input Settings")]
-        [SerializeField] private float minSwipeDistance = 50f;
+
+        [Header("Input Settings")] [SerializeField]
+        private float minSwipeDistance = 50f;
+
         [SerializeField] private float maxSwipeTime = 1f;
 
-        [Header("Visual Feedback")]
-        [SerializeField] private bool highlightSelectedBall = true;
+        [Header("Visual Feedback")] [SerializeField]
+        private bool highlightSelectedBall = true;
 
-        [Header("Debug")]
-        [SerializeField] private bool showDebugLogs = false;
-        
+        [Header("Debug")] [SerializeField] private bool showDebugLogs = false;
+
         private PlayerInputActions _inputActions;
-        
+
         private Camera _mainCamera;
         private Ball _selectedBall;
         private Vector2 _touchStartPos;
         private float _touchStartTime;
         private bool _isTouching;
         private bool _inputEnabled = true;
-        
+
         private void Awake()
         {
             // Singleton
@@ -37,6 +39,7 @@ namespace _Project.Scripts.Systems.Input
                 Destroy(gameObject);
                 return;
             }
+
             Instance = this;
 
             // Camera
@@ -49,7 +52,7 @@ namespace _Project.Scripts.Systems.Input
             // Input Actions oluştur
             _inputActions = new PlayerInputActions();
         }
-        
+
         private void OnEnable()
         {
             // Input Actions'ı aktif et
@@ -65,7 +68,7 @@ namespace _Project.Scripts.Systems.Input
                 Debug.Log("[InputHandler] Input Actions enabled and subscribed");
             }
         }
-        
+
         private void OnDisable()
         {
             // CALLBACK'LERİ KALDIR (Unsubscribe)
@@ -81,13 +84,13 @@ namespace _Project.Scripts.Systems.Input
                 Debug.Log("[InputHandler] Input Actions disabled and unsubscribed");
             }
         }
-        
+
         private void OnDestroy()
         {
             // Input Actions'ı dispose et (memory temizliği)
             _inputActions?.Dispose();
         }
-        
+
         private void OnTouchStarted(InputAction.CallbackContext context)
         {
             if (!_inputEnabled) return;
@@ -125,7 +128,7 @@ namespace _Project.Scripts.Systems.Input
                 }
             }
         }
-        
+
         private void OnTouchEnded(InputAction.CallbackContext context)
         {
             if (!_isTouching) return;
@@ -142,6 +145,7 @@ namespace _Project.Scripts.Systems.Input
                 {
                     Debug.Log($"[InputHandler] Touch too slow ({touchDuration:F2}s), cancelled");
                 }
+
                 DeselectBall();
                 return;
             }
@@ -161,8 +165,9 @@ namespace _Project.Scripts.Systems.Input
                 {
                     Debug.Log($"[InputHandler] Tap detected (distance: {swipeDistance:F0}px), no move");
                 }
+
                 // Seçili bırak, hareket etme
-                return;  // DeselectBall() çağırma!
+                return; // DeselectBall() çağırma!
             }
 
             // Direction hesapla
@@ -170,13 +175,14 @@ namespace _Project.Scripts.Systems.Input
 
             if (showDebugLogs)
             {
-                Debug.Log($"[InputHandler] Swipe detected: {direction} (distance: {swipeDistance:F0}px, time: {touchDuration:F2}s)");
+                Debug.Log(
+                    $"[InputHandler] Swipe detected: {direction} (distance: {swipeDistance:F0}px, time: {touchDuration:F2}s)");
             }
 
             // Hareketi işle
             ProcessMove(direction).Forget();
         }
-        
+
         private Vector2Int GetSwipeDirection(Vector2 swipeDelta)
         {
             float absX = Mathf.Abs(swipeDelta.x);
@@ -194,7 +200,7 @@ namespace _Project.Scripts.Systems.Input
                 return swipeDelta.y > 0 ? Vector2Int.up : Vector2Int.down;
             }
         }
-        
+
         private async UniTaskVoid ProcessMove(Vector2Int direction)
         {
             if (_selectedBall == null) return;
@@ -202,46 +208,93 @@ namespace _Project.Scripts.Systems.Input
             Vector2Int currentPos = _selectedBall.GridPosition;
             Vector2Int targetPos = currentPos + direction;
 
-            // Validation: Geçerli pozisyon?
             if (!GridManager.Instance.IsValidPosition(targetPos))
             {
                 if (showDebugLogs)
                 {
                     Debug.Log("[InputHandler] Target position out of bounds");
                 }
+
                 DeselectBall();
                 return;
             }
 
-            // Hedef hücre boş mu?
             GridCell targetCell = GridManager.Instance.GetCell(targetPos);
-            if (!targetCell.IsEmpty)
-            {
-                if (showDebugLogs)
-                {
-                    Debug.Log("[InputHandler] Target cell is not empty");
-                }
-                DeselectBall();
-                return;
-            }
-
-            // Input'u kapat
             _inputEnabled = false;
 
-            // ✅ ÇÖZÜM: ref kullanmadan direkt GridManager methodlarını kullan
-            // GridManager'a helper methodlar ekleyeceğiz
-            GridManager.Instance.ClearCell(currentPos);
-            GridManager.Instance.SetBallToCell(targetPos, _selectedBall);
+            if (targetCell.IsOccupied)
+            {
+                Ball targetBall = targetCell.OccupyingBall;
 
-            // Animasyon
-            await _selectedBall.MoveTo(targetPos, targetCell.WorldPosition);
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[InputHandler] Swapping balls: {currentPos} ↔ {targetPos}");
+                }
 
-            // Seçimi kaldır
-            DeselectBall();
+                // Swap
+                GridManager.Instance.SwapCells(currentPos, targetPos);
 
-            // TODO: Match kontrolü
+                // Animasyonlar
+                var task1 = _selectedBall.MoveTo(targetPos, targetCell.WorldPosition);
+                var task2 = targetBall.MoveTo(currentPos, GridManager.Instance.GetCell(currentPos).WorldPosition);
+                await UniTask.WhenAll(task1, task2);
 
-            // Input'u aç
+                // Match kontrol et
+                var match1 = GridManager.Instance.CheckMatchAt(currentPos);
+                var match2 = GridManager.Instance.CheckMatchAt(targetPos);
+
+                List<MatchResult> matches = new List<MatchResult>();
+                if (match1 != null) matches.Add(match1);
+                if (match2 != null) matches.Add(match2);
+
+                if (matches.Count > 0)
+                {
+                    if (showDebugLogs)
+                    {
+                        Debug.Log($"[InputHandler] {matches.Count} match(es) found after swap!");
+                    }
+
+                    await GridManager.Instance.ProcessMatches(matches);
+                }
+                else
+                {
+                    // Match yok, geri al!
+                    if (showDebugLogs)
+                    {
+                        Debug.Log("[InputHandler] No match after swap, reverting...");
+                    }
+
+                    // Geri swap
+                    GridManager.Instance.SwapCells(targetPos, currentPos);
+
+                    // Geri animasyon (_selectedBall hala var!)
+                    var revertTask1 = _selectedBall.MoveTo(currentPos,
+                        GridManager.Instance.GetCell(currentPos).WorldPosition);
+                    var revertTask2 = targetBall.MoveTo(targetPos, targetCell.WorldPosition);
+                    await UniTask.WhenAll(revertTask1, revertTask2);
+                }
+
+                // ✅ En sonda deselect yap
+                DeselectBall();
+            }
+            else
+            {
+                // Hedef boş: Normal hareket
+                GridManager.Instance.ClearCell(currentPos);
+                GridManager.Instance.SetBallToCell(targetPos, _selectedBall);
+
+                await _selectedBall.MoveTo(targetPos, targetCell.WorldPosition);
+
+                DeselectBall();
+
+                var match = GridManager.Instance.CheckMatchAt(targetPos);
+                if (match != null)
+                {
+                    List<MatchResult> matches = new List<MatchResult> { match };
+                    await GridManager.Instance.ProcessMatches(matches);
+                }
+            }
+
             _inputEnabled = true;
 
             if (showDebugLogs)
@@ -249,7 +302,7 @@ namespace _Project.Scripts.Systems.Input
                 Debug.Log($"[InputHandler] Move completed: {currentPos} → {targetPos}");
             }
         }
-        
+
         private void SelectBall(Ball ball)
         {
             if (_selectedBall != null)
@@ -264,7 +317,7 @@ namespace _Project.Scripts.Systems.Input
                 _selectedBall.Select();
             }
         }
-        
+
         private void DeselectBall()
         {
             if (_selectedBall != null)
@@ -273,7 +326,7 @@ namespace _Project.Scripts.Systems.Input
                 _selectedBall = null;
             }
         }
-        
+
         public void SetInputEnabled(bool enabled)
         {
             _inputEnabled = enabled;
@@ -289,7 +342,7 @@ namespace _Project.Scripts.Systems.Input
                 Debug.Log($"[InputHandler] Input {(enabled ? "enabled" : "disabled")}");
             }
         }
-        
+
         private void OnDrawGizmos()
         {
             if (!_isTouching) return;
@@ -297,7 +350,7 @@ namespace _Project.Scripts.Systems.Input
 
             // Swipe line çiz
             Vector2 currentPos = _inputActions.Gameplay.TouchPosition.ReadValue<Vector2>();
-            
+
             Vector3 startWorld = _mainCamera.ScreenToWorldPoint(new Vector3(_touchStartPos.x, _touchStartPos.y, 10f));
             Vector3 currentWorld = _mainCamera.ScreenToWorldPoint(new Vector3(currentPos.x, currentPos.y, 10f));
 
