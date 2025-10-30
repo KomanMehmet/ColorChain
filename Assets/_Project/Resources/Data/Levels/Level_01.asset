@@ -15,8 +15,8 @@ MonoBehaviour:
   levelNumber: 1
   levelName: Easy Start
   gridSize: 8
-  maxMoves: 55
-  targetScore: 200
+  maxMoves: 20
+  targetScore: 100
   twoStarScore: 700
   threeStarScore: 1200
   availableColors: 000000000100000002000000

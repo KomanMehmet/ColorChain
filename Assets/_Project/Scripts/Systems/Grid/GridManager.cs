@@ -2,6 +2,7 @@
 using _Project.Scripts.Core.Enums;
 using _Project.Scripts.Data;
 using _Project.Scripts.Gameplay.Ball;
+using _Project.Scripts.Systems.Level;
 using _Project.Scripts.Systems.Match;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -254,6 +255,14 @@ namespace _Project.Scripts.Systems.Grid
             }
 
             Debug.Log($"[GridManager] Processing {matches.Count} match(es)");
+            
+            foreach (var match in matches)
+            {
+                if (LevelManager.Instance != null)
+                {
+                    LevelManager.Instance.OnMatchCompleted(match.MatchCount, match.MatchType);
+                }
+            }
 
             // Her match için
             foreach (var match in matches)

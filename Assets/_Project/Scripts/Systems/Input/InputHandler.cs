@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using _Project.Scripts.Gameplay.Ball;
 using _Project.Scripts.Systems.Grid;
+using _Project.Scripts.Systems.Level;
 using _Project.Scripts.Systems.Match;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -300,6 +301,11 @@ namespace _Project.Scripts.Systems.Input
             if (showDebugLogs)
             {
                 Debug.Log($"[InputHandler] Move completed: {currentPos} → {targetPos}");
+            }
+            
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.OnMoveCompleted();
             }
         }
 
