@@ -1,6 +1,9 @@
 ﻿using System;
 using _Project.Scripts.Core.Enums;
 using _Project.Scripts.Data;
+using _Project.Scripts.Systems.UI.Core;
+using _Project.Scripts.Systems.UI.Panels;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace _Project.Scripts.Systems.Level
@@ -168,7 +171,6 @@ namespace _Project.Scripts.Systems.Level
         {
             _currentState = LevelState.Completed;
 
-            // Yıldız hesapla
             int stars = CalculateStars();
 
             if (showDebugLogs)
@@ -176,8 +178,10 @@ namespace _Project.Scripts.Systems.Level
                 Debug.Log($"[LevelManager] LEVEL COMPLETED! Score: {_currentScore} | Stars: {stars}⭐");
             }
 
-            // Event tetikle
             OnLevelCompleted?.Invoke(stars);
+
+            // ✅ UI Panel'i otomatik göster
+            ShowLevelCompletePanel(stars).Forget();
         }
         
         private void CompleteLevelFailed()
@@ -189,8 +193,32 @@ namespace _Project.Scripts.Systems.Level
                 Debug.Log($"[LevelManager] LEVEL FAILED! Score: {_currentScore}/{currentLevel.TargetScore}");
             }
 
-            // Event tetikle
             OnLevelFailed?.Invoke();
+
+            // ✅ UI Panel'i otomatik göster
+            ShowLevelFailedPanel().Forget();
+        }
+
+        private async UniTaskVoid ShowLevelCompletePanel(int stars)
+        {
+            await UniTask.Delay(500); // Biraz bekle (son animasyonlar bitsin)
+
+            var completePanel = UIManager.Instance.GetPanel<LevelCompletePanel>();
+            if (completePanel != null)
+            {
+                await completePanel.ShowWithStars(stars, _currentScore);
+            }
+        }
+        
+        private async UniTaskVoid ShowLevelFailedPanel()
+        {
+            await UniTask.Delay(500);
+
+            var failedPanel = UIManager.Instance.GetPanel<LevelFailedPanel>();
+            if (failedPanel != null)
+            {
+                await failedPanel.ShowWithScore(_currentScore, currentLevel.TargetScore);
+            }
         }
         
         private int CalculateStars()
