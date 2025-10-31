@@ -1,8 +1,10 @@
-﻿using _Project.Scripts.Core.Enums;
+﻿using System;
+using _Project.Scripts.Core.Enums;
 using _Project.Scripts.Core.Interfaces;
 using _Project.Scripts.Data;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using System.Threading;
 
 namespace _Project.Scripts.Gameplay.Ball
 {
@@ -25,6 +27,10 @@ namespace _Project.Scripts.Gameplay.Ball
         private Vector2Int _gridPosition;
         private bool _isSelected;
         private bool _isAnimating;
+        
+        // ✅ CancellationTokenSource ekle
+        private CancellationTokenSource _cancellationTokenSource;
+        
         public BallColor Color => _data.Color;
         public Vector2Int GridPosition => _gridPosition;
         public bool IsAnimating => _isAnimating;
@@ -36,6 +42,9 @@ namespace _Project.Scripts.Gameplay.Ball
             _circleCollider = GetComponent<CircleCollider2D>();
             
             _circleCollider.isTrigger = true;
+            
+            // ✅ CancellationTokenSource oluştur
+            _cancellationTokenSource = new CancellationTokenSource();
         }
         
         public void Initialize(Vector2Int gridPos, BallData ballData)
@@ -63,23 +72,37 @@ namespace _Project.Scripts.Gameplay.Ball
             
             float elapsed = 0f;
             
-            while (elapsed < spawnDuration)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = elapsed / spawnDuration;
-                
-                const float c1 = 1.70158f;
-                const float c3 = c1 + 1f;
-                
-                float easeValue = 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
-                
-                transform.localScale = Vector3.one * easeValue * (1f + bounceAmount);
-                
-                await UniTask.Yield();
-            }
+                // ✅ CancellationToken ile while loop
+                while (elapsed < spawnDuration)
+                {
+                    // ✅ Token iptal edildi mi kontrol et
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    
+                    elapsed += Time.deltaTime;
+                    float t = elapsed / spawnDuration;
+                    
+                    const float c1 = 1.70158f;
+                    const float c3 = c1 + 1f;
+                    
+                    float easeValue = 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+                    
+                    transform.localScale = Vector3.one * easeValue * (1f + bounceAmount);
+                    
+                    await UniTask.Yield(_cancellationTokenSource.Token); // ✅ Token ekle
+                }
 
-            transform.localScale = Vector3.one;
-            _isAnimating = false;
+                transform.localScale = Vector3.one;
+            }
+            catch (OperationCanceledException)
+            {
+                // Animasyon iptal edildi, sorun yok
+            }
+            finally
+            {
+                _isAnimating = false;
+            }
         }
         
         public async UniTask MoveTo(Vector2Int newGridPos, Vector3 targetWorldPos)
@@ -92,22 +115,36 @@ namespace _Project.Scripts.Gameplay.Ball
             
             float elapsed = 0f;
 
-            while (elapsed < moveDuration)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = elapsed / moveDuration;
-                
-                float easeValue = t < 0.5f 
-                    ? 2f * t * t  
-                    : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
-                
-                transform.position = Vector3.Lerp(startPos, targetWorldPos, easeValue);
-                
-                await UniTask.Yield();
-            }
+                // ✅ CancellationToken ile while loop
+                while (elapsed < moveDuration)
+                {
+                    // ✅ Token iptal edildi mi kontrol et
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    
+                    elapsed += Time.deltaTime;
+                    float t = elapsed / moveDuration;
+                    
+                    float easeValue = t < 0.5f 
+                        ? 2f * t * t  
+                        : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+                    
+                    transform.position = Vector3.Lerp(startPos, targetWorldPos, easeValue);
+                    
+                    await UniTask.Yield(_cancellationTokenSource.Token); // ✅ Token ekle
+                }
 
-            transform.position = targetWorldPos;
-            _isAnimating = false;
+                transform.position = targetWorldPos;
+            }
+            catch (OperationCanceledException)
+            {
+                // İptal edildi, sorun yok
+            }
+            finally
+            {
+                _isAnimating = false;
+            }
         }
         
         public async UniTask Pop()
@@ -118,36 +155,48 @@ namespace _Project.Scripts.Gameplay.Ball
             
             float elapsed = 0f;
             
-            while (elapsed < popDuration)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = elapsed / popDuration;
-                
-                float scale;
-                
-                if (t < 0.5f)
+                // ✅ CancellationToken ile while loop
+                while (elapsed < popDuration)
                 {
-                    float t1 = t * 2f;
-                    scale = Mathf.Lerp(1f, 1.3f, t1);
+                    // ✅ Token iptal edildi mi kontrol et
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    
+                    elapsed += Time.deltaTime;
+                    float t = elapsed / popDuration;
+                    
+                    float scale;
+                    
+                    if (t < 0.5f)
+                    {
+                        float t1 = t * 2f;
+                        scale = Mathf.Lerp(1f, 1.3f, t1);
+                    }
+                    else
+                    {
+                        float t2 = (t - 0.5f) * 2f;
+                        scale = Mathf.Lerp(1.3f, 0f, t2);
+                    }
+                    
+                    transform.localScale = startScale * scale;
+                    
+                    Color currentColor = _spriteRenderer.color;
+                    currentColor.a = 1f - t; 
+                    _spriteRenderer.color = currentColor;
+                    
+                    await UniTask.Yield(_cancellationTokenSource.Token); // ✅ Token ekle
                 }
-                else
-                {
-                    float t2 = (t - 0.5f) * 2f;
-                    scale = Mathf.Lerp(1.3f, 0f, t2);
-                }
-                
-                transform.localScale = startScale * scale;
-                
-                Color currentColor = _spriteRenderer.color;
-                currentColor.a = 1f - t; 
-                _spriteRenderer.color = currentColor;
-                
-                await UniTask.Yield();
             }
-            
-            _isAnimating = false;
-
-            OnRelease();
+            catch (OperationCanceledException)
+            {
+                // İptal edildi, hemen deaktif et
+            }
+            finally
+            {
+                _isAnimating = false;
+                OnRelease();
+            }
         }
         
         public void Select()
@@ -182,9 +231,14 @@ namespace _Project.Scripts.Gameplay.Ball
             Deselect();
             
             gameObject.SetActive(false);
-            
-            // TODO: GridManager'a haber ver (event ile)
-            // Şimdilik manuel handle edeceğiz
+        }
+        
+        // ✅ OnDestroy'da cancel et
+        private void OnDestroy()
+        {
+            // Tüm async operasyonları iptal et
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
         }
         
         private void OnDrawGizmosSelected()

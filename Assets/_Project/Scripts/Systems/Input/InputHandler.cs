@@ -12,6 +12,8 @@ namespace _Project.Scripts.Systems.Input
     public class InputHandler : MonoBehaviour
     {
         public static InputHandler Instance { get; private set; }
+        
+        private bool _isDestroying = false;
 
         [Header("Input Settings")] [SerializeField]
         private float minSwipeDistance = 50f;
@@ -88,6 +90,8 @@ namespace _Project.Scripts.Systems.Input
 
         private void OnDestroy()
         {
+            _isDestroying = true;
+            
             // Input Actions'ı dispose et (memory temizliği)
             _inputActions?.Dispose();
         }
@@ -204,6 +208,8 @@ namespace _Project.Scripts.Systems.Input
 
         private async UniTaskVoid ProcessMove(Vector2Int direction)
         {
+            if (_isDestroying) return;
+            
             if (_selectedBall == null) return;
 
             Vector2Int currentPos = _selectedBall.GridPosition;

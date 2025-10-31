@@ -255,5 +255,14 @@ namespace _Project.Scripts.Systems.Level
             // TODO: Level listesi olacak, sıradakini yükle
             Debug.Log("[LevelManager] Next level not implemented yet");
         }
+        
+        private void OnDestroy()
+        {
+            // Event'leri temizle (memory leak önleme)
+            OnScoreChanged = null;
+            OnMovesChanged = null;
+            OnLevelCompleted = null;
+            OnLevelFailed = null;
+        }
     }
 }

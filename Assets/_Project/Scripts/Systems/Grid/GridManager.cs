@@ -12,6 +12,8 @@ namespace _Project.Scripts.Systems.Grid
     public class GridManager : MonoBehaviour
     {
         public static GridManager Instance { get; private set; }
+        
+        private bool _isDestroying = false;
 
         [Header("Grid Settings")] [SerializeField]
         private int gridSize = 8;
@@ -249,6 +251,8 @@ namespace _Project.Scripts.Systems.Grid
 
         public async UniTask ProcessMatches(List<MatchResult> matches)
         {
+            if (_isDestroying) return;
+            
             if (matches == null || matches.Count == 0)
             {
                 return;
@@ -304,6 +308,8 @@ namespace _Project.Scripts.Systems.Grid
         /// </summary>
         private async UniTask ApplyGravity()
         {
+            if (_isDestroying) return; 
+            
             bool hasMoved;
             int maxIterations = gridSize; // Sonsuz döngü önleme
             int iteration = 0;
@@ -359,6 +365,8 @@ namespace _Project.Scripts.Systems.Grid
         /// </summary>
         private async UniTask FillEmptyCells()
         {
+            if (_isDestroying) return;
+            
             List<UniTask> spawnTasks = new List<UniTask>();
 
             // Yukarıdan aşağı tara
@@ -385,6 +393,8 @@ namespace _Project.Scripts.Systems.Grid
         /// </summary>
         private async UniTask CheckAndProcessChainReactions()
         {
+            if (_isDestroying) return;
+            
             int chainCount = 0;
             int maxChains = 10; // Sonsuz döngü önleme
 
@@ -614,6 +624,11 @@ namespace _Project.Scripts.Systems.Grid
             // Swap
             _grid[pos1.x, pos1.y].SetBall(ball2);
             _grid[pos2.x, pos2.y].SetBall(ball1);
+        }
+        
+        private void OnDestroy()
+        {
+            _isDestroying = true;
         }
     }
 }
