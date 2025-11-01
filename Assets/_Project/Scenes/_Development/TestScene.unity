@@ -1168,6 +1168,97 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &462974886
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 462974888}
+  - component: {fileID: 462974887}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &462974887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 462974886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7dbcc5a794894a848986f2f565866b62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Systems.Audio.AudioManager
+  musicSource: {fileID: 0}
+  sfxSourcePrefab: {fileID: 0}
+  matchPopSFX:
+    name: MatchPop
+    clip: {fileID: 8300000, guid: d6945231be24c7240a281458fc849e1f, type: 3}
+    volume: 1
+    pitch: 1
+    loop: 0
+  swapSFX:
+    name: Swap
+    clip: {fileID: 8300000, guid: 2a71d8e8ea428e0409d3df636b9f0192, type: 3}
+    volume: 0.8
+    pitch: 1
+    loop: 0
+  comboSFX:
+    name: Combo
+    clip: {fileID: 8300000, guid: 46e7fc2590c4ae64fb8c79606698b98d, type: 3}
+    volume: 1
+    pitch: 1.2
+    loop: 0
+  scoreSFX:
+    name: Score
+    clip: {fileID: 8300000, guid: 28a7e67ca249e874887b4c601e4f5e1b, type: 3}
+    volume: 0.7
+    pitch: 1.5
+    loop: 0
+  levelCompleteSFX:
+    name: LevelComplete
+    clip: {fileID: 8300000, guid: c58a6e6d4ceb56e4882a7d60561a7afc, type: 3}
+    volume: 1
+    pitch: 1
+    loop: 0
+  levelFailedSFX:
+    name: LevelFailed
+    clip: {fileID: 8300000, guid: 76adc3bada8ddff4bbd042635fed2f7d, type: 3}
+    volume: 1
+    pitch: 0.8
+    loop: 0
+  gameplayMusic: {fileID: 0}
+  menuMusic: {fileID: 0}
+  matchEventChannel: {fileID: 11400000, guid: 3f0589213b40e394394289ae85bf6928, type: 2}
+  comboEventChannel: {fileID: 11400000, guid: 49761b706d86e7540b10d2e6b734bb38, type: 2}
+  scoreEventChannel: {fileID: 11400000, guid: 34b28b38c2bbe9d40ab81ea9b49df72d, type: 2}
+  audioSettings: {fileID: 11400000, guid: 4494a24ef151f254db9ed3800dc66464, type: 2}
+  sfxPoolSize: 10
+  sfxContainer: {fileID: 0}
+  showDebugLogs: 1
+--- !u!4 &462974888
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 462974886}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &587335785
 GameObject:
   m_ObjectHideFlags: 0
@@ -4544,3 +4635,4 @@ SceneRoots:
   - {fileID: 133017559}
   - {fileID: 207826282}
   - {fileID: 201759124}
+  - {fileID: 462974888}

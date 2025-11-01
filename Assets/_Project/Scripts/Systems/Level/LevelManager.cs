@@ -102,6 +102,11 @@ namespace _Project.Scripts.Systems.Level
                 ScoreEventData scoreData = new ScoreEventData(0, _currentScore);
                 scoreEventChannel.RaiseEvent(scoreData);
             }
+            
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayGameplayMusic();
+            }
 
             if (showDebugLogs)
             {
@@ -235,6 +240,11 @@ namespace _Project.Scripts.Systems.Level
             _currentState = LevelState.Completed;
 
             int stars = CalculateStars();
+            
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlaySFX("levelcomplete");
+            }
 
             if (showDebugLogs)
             {
@@ -249,6 +259,11 @@ namespace _Project.Scripts.Systems.Level
         private void CompleteLevelFailed()
         {
             _currentState = LevelState.Failed;
+            
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlaySFX("levelfailed");
+            }
 
             if (showDebugLogs)
             {
