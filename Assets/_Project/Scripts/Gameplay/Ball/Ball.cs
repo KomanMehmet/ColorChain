@@ -5,6 +5,7 @@ using _Project.Scripts.Data;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using System.Threading;
+using _Project.Scripts.Systems.VFX;
 
 namespace _Project.Scripts.Gameplay.Ball
 {
@@ -69,6 +70,16 @@ namespace _Project.Scripts.Gameplay.Ball
         private async UniTaskVoid PlaySpawnAnimation()
         {
             _isAnimating = true;
+            
+            if (ParticleManager.Instance != null && _data != null)
+            {
+                ParticleManager.Instance.PlayEffectOneShot(
+                    ParticleType.Spawn,
+                    transform.position, 
+                    _data.BallColor,
+                    0.5f // Daha küçük scale
+                );
+            }
             
             float elapsed = 0f;
             
@@ -155,6 +166,15 @@ namespace _Project.Scripts.Gameplay.Ball
             
             float elapsed = 0f;
             
+            if (ParticleManager.Instance != null && _data != null)
+            {
+                ParticleManager.Instance.PlayEffectOneShot(
+                    ParticleType.Pop,
+                    transform.position, 
+                    _data.BallColor
+                );
+            }
+            
             try
             {
                 // ✅ CancellationToken ile while loop
@@ -192,10 +212,18 @@ namespace _Project.Scripts.Gameplay.Ball
             {
                 // İptal edildi, hemen deaktif et
             }
+            catch (System.Exception)
+            {
+                // Obje destroy edilmiş
+            }
             finally
             {
                 _isAnimating = false;
-                OnRelease();
+        
+                if (this != null && gameObject != null)
+                {
+                    OnRelease();
+                }
             }
         }
         

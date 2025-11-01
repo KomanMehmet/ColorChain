@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using _Project.Scripts.Core.Enums;
+using _Project.Scripts.Core.EventChannels;
 using _Project.Scripts.Data;
 using _Project.Scripts.Gameplay.Ball;
-using _Project.Scripts.Systems.Level;
 using _Project.Scripts.Systems.Match;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -15,25 +15,33 @@ namespace _Project.Scripts.Systems.Grid
         
         private bool _isDestroying = false;
 
-        [Header("Grid Settings")] [SerializeField]
-        private int gridSize = 8;
-
+        [Header("Grid Settings")]
+        [SerializeField] private int gridSize = 8;
         [SerializeField] private float cellSize = 1f;
         [SerializeField] private Vector3 gridOrigin = Vector3.zero;
 
-        [Header("Ball Settings")] [SerializeField]
-        private GameObject ballPrefab;
-
+        [Header("Ball Settings")]
+        [SerializeField] private GameObject ballPrefab;
         [SerializeField] private BallData[] ballDataArray;
 
-        [Header("References")] [SerializeField]
-        private Transform ballContainer;
+        [Header("References")]
+        [SerializeField] private Transform ballContainer;
+
+        [Header("Event Channels")]
+        [SerializeField] private MatchEventChannel matchEventChannel;
+        [SerializeField] private ComboEventChannel comboEventChannel;
+        [SerializeField] private BallPopEventChannel ballPopEventChannel;
+        [SerializeField] private GridProcessingCompleteEventChannel gridProcessingCompleteEventChannel; // ✅ YENİ
+
+        [Header("Debug")]
+        [SerializeField] private bool showDebugLogs = true;
 
         private MatchChecker _matchChecker;
-
         private GridCell[,] _grid;
-
-        private Queue<Ball> _ballPool = new Queue<Ball>();
+        
+        private int _currentCombo = 0;
+        private bool _isProcessing = false;
+        private int _totalMatchesThisMove = 0;
 
         private void Awake()
         {
@@ -42,6 +50,8 @@ namespace _Project.Scripts.Systems.Grid
                 Destroy(gameObject);
                 return;
             }
+            
+            Application.targetFrameRate = 60;
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
@@ -49,17 +59,19 @@ namespace _Project.Scripts.Systems.Grid
 
         public void Initialize(LevelData levelData)
         {
-            // LevelData'dan ayarları al
+            if (levelData == null)
+            {
+                Debug.LogError("[GridManager] LevelData is null!");
+                return;
+            }
+
             gridSize = levelData.GridSize;
             ballDataArray = GetBallDataFromColors(levelData.AvailableColors);
 
-            // ✅ MatchChecker oluştur
             _matchChecker = new MatchChecker(this);
 
-            // Grid array'ini oluştur
             _grid = new GridCell[gridSize, gridSize];
 
-            // Her hücreyi oluştur
             for (int x = 0; x < gridSize; x++)
             {
                 for (int y = 0; y < gridSize; y++)
@@ -70,13 +82,16 @@ namespace _Project.Scripts.Systems.Grid
                 }
             }
 
-            // İlk topları spawn et
             SpawnInitialBalls().Forget();
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[GridManager] Initialized: {gridSize}x{gridSize} grid");
+            }
         }
 
         private Vector3 GridToWorldPosition(Vector2Int gridPos)
         {
-            // Grid'i merkeze almak için offset hesapla
             float offsetX = (gridSize - 1) * cellSize * 0.5f;
             float offsetY = (gridSize - 1) * cellSize * 0.5f;
 
@@ -104,13 +119,14 @@ namespace _Project.Scripts.Systems.Grid
                 for (int y = 0; y < gridSize; y++)
                 {
                     Vector2Int pos = new Vector2Int(x, y);
-
-                    // ✅ Match oluşturmayan bir ball spawn et
                     await SpawnBallWithoutMatch(pos);
-
-                    // Küçük delay (görsel olarak güzel durur)
                     await UniTask.Delay(50);
                 }
+            }
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[GridManager] Initial balls spawned");
             }
         }
 
@@ -121,24 +137,20 @@ namespace _Project.Scripts.Systems.Grid
                 return;
             }
 
-            // Pozisyonu kontrol et: sol ve aşağı komşular
             List<BallColor> bannedColors = new List<BallColor>();
 
-            // Sol komşuya bak (x-1)
             Vector2Int leftPos = gridPos + Vector2Int.left;
             if (IsValidPosition(leftPos))
             {
                 GridCell leftCell = GetCell(leftPos);
                 if (leftCell.OccupyingBall != null)
                 {
-                    // Sol komşunun soluna bak (x-2)
                     Vector2Int leftLeft = leftPos + Vector2Int.left;
                     if (IsValidPosition(leftLeft))
                     {
                         GridCell leftLeftCell = GetCell(leftLeft);
                         if (leftLeftCell.OccupyingBall != null)
                         {
-                            // 2 aynı renk yan yana → 3. olmasın
                             if (leftCell.OccupyingBall.Color == leftLeftCell.OccupyingBall.Color)
                             {
                                 bannedColors.Add(leftCell.OccupyingBall.Color);
@@ -148,21 +160,18 @@ namespace _Project.Scripts.Systems.Grid
                 }
             }
 
-            // Alt komşuya bak (y-1)
             Vector2Int downPos = gridPos + Vector2Int.down;
             if (IsValidPosition(downPos))
             {
                 GridCell downCell = GetCell(downPos);
                 if (downCell.OccupyingBall != null)
                 {
-                    // Alt komşunun altına bak (y-2)
                     Vector2Int downDown = downPos + Vector2Int.down;
                     if (IsValidPosition(downDown))
                     {
                         GridCell downDownCell = GetCell(downDown);
                         if (downDownCell.OccupyingBall != null)
                         {
-                            // 2 aynı renk alt alta → 3. olmasın
                             if (downCell.OccupyingBall.Color == downDownCell.OccupyingBall.Color)
                             {
                                 bannedColors.Add(downCell.OccupyingBall.Color);
@@ -172,10 +181,7 @@ namespace _Project.Scripts.Systems.Grid
                 }
             }
 
-            // Yasaklı olmayan bir renk seç
             BallData ballData = GetRandomBallDataExcluding(bannedColors);
-
-            // Ball spawn et
             GridCell cell = GetCell(gridPos);
             GameObject ballObj = Instantiate(ballPrefab, cell.WorldPosition, Quaternion.identity, ballContainer);
             Ball ball = ballObj.GetComponent<Ball>();
@@ -188,7 +194,6 @@ namespace _Project.Scripts.Systems.Grid
 
         private BallData GetRandomBallDataExcluding(List<BallColor> excludedColors)
         {
-            // Kullanılabilir data'ları filtrele
             List<BallData> availableData = new List<BallData>();
             float totalWeight = 0f;
 
@@ -201,13 +206,11 @@ namespace _Project.Scripts.Systems.Grid
                 }
             }
 
-            // Eğer hiç kullanılabilir renk yoksa (çok nadir), herhangi birini ver
             if (availableData.Count == 0)
             {
                 return ballDataArray[Random.Range(0, ballDataArray.Length)];
             }
 
-            // Weighted random
             float randomValue = Random.Range(0f, totalWeight);
             float currentWeight = 0f;
 
@@ -234,10 +237,6 @@ namespace _Project.Scripts.Systems.Grid
             return _matchChecker.CheckMatchAt(gridPos);
         }
 
-        /// <summary>
-        /// Tüm grid'de match kontrol et
-        /// </summary>
-        /// <returns>Bulunan tüm matchler</returns>
         public List<MatchResult> CheckAllMatches()
         {
             if (_matchChecker == null)
@@ -249,6 +248,70 @@ namespace _Project.Scripts.Systems.Grid
             return _matchChecker.CheckAllMatches();
         }
 
+        public async UniTask ProcessMove(Vector2Int pos1, Vector2Int pos2)
+        {
+            if (_isDestroying) return;
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[GridManager] Processing move: {pos1} <-> {pos2}");
+            }
+
+            // ✅ Processing başladı
+            _isProcessing = true;
+            _totalMatchesThisMove = 0;
+
+            // Match kontrol et
+            List<MatchResult> matches = new List<MatchResult>();
+
+            MatchResult match1 = CheckMatchAt(pos1);
+            if (match1 != null)
+            {
+                matches.Add(match1);
+                _totalMatchesThisMove++;
+            }
+
+            MatchResult match2 = CheckMatchAt(pos2);
+            if (match2 != null && !matches.Contains(match2))
+            {
+                matches.Add(match2);
+                _totalMatchesThisMove++;
+            }
+
+            if (matches.Count > 0)
+            {
+                await ProcessMatches(matches);
+
+                NotifyProcessingComplete();
+            }
+            else
+            {
+                // Match yok, swap geri al
+                if (showDebugLogs)
+                {
+                    Debug.Log("[GridManager] No match found, reverting swap");
+                }
+
+                SwapCells(pos1, pos2);
+
+                Ball ball1 = GetCell(pos1).OccupyingBall;
+                Ball ball2 = GetCell(pos2).OccupyingBall;
+
+                if (ball1 != null)
+                {
+                    await ball1.MoveTo(pos1, GetCell(pos1).WorldPosition);
+                }
+
+                if (ball2 != null)
+                {
+                    await ball2.MoveTo(pos2, GetCell(pos2).WorldPosition);
+                }
+
+                // ✅ Processing bitti (match olmasa da)
+                NotifyProcessingComplete();
+            }
+        }
+        
         public async UniTask ProcessMatches(List<MatchResult> matches)
         {
             if (_isDestroying) return;
@@ -258,60 +321,80 @@ namespace _Project.Scripts.Systems.Grid
                 return;
             }
 
-            Debug.Log($"[GridManager] Processing {matches.Count} match(es)");
-            
-            foreach (var match in matches)
+            if (showDebugLogs)
             {
-                if (LevelManager.Instance != null)
-                {
-                    LevelManager.Instance.OnMatchCompleted(match.MatchCount, match.MatchType);
-                }
+                Debug.Log($"[GridManager] Processing {matches.Count} match(es)");
             }
 
-            // Her match için
+            // ✅ Her match için event raise et
             foreach (var match in matches)
             {
-                Debug.Log($"[GridManager] Match: {match}");
+                GridCell cell = GetCell(match.MatchedPositions[0]);
+                BallColor matchColor = cell.OccupyingBall != null 
+                    ? cell.OccupyingBall.Color 
+                    : BallColor.Red;
 
-                List<UniTask> popTasks = new List<UniTask>();
+                if (matchEventChannel != null)
+                {
+                    MatchEventData data = new MatchEventData(
+                        match.MatchCount,
+                        match.MatchType,
+                        match.MatchedPositions.ToArray(),
+                        matchColor
+                    );
+                    
+                    matchEventChannel.RaiseEvent(data);
+                }
+            }
+            
+            List<UniTask> popTasks = new List<UniTask>();
 
+            foreach (var match in matches)
+            {
                 foreach (var pos in match.MatchedPositions)
                 {
                     GridCell cell = GetCell(pos);
                     if (cell.OccupyingBall != null)
                     {
-                        UniTask popTask = cell.OccupyingBall.Pop();
+                        Ball ball = cell.OccupyingBall;
+
+                        if (ballPopEventChannel != null)
+                        {
+                            BallPopEventData popData = new BallPopEventData(
+                                ball.transform.position,
+                                ball.GetComponent<SpriteRenderer>()?.color ?? Color.white,
+                                match.MatchCount
+                            );
+                            
+                            ballPopEventChannel.RaiseEvent(popData);
+                        }
+
+                        UniTask popTask = ball.Pop();
                         popTasks.Add(popTask);
                         ClearCell(pos);
                     }
                 }
-
-                await UniTask.WhenAll(popTasks);
             }
 
+            await UniTask.WhenAll(popTasks);
             await UniTask.Delay(200);
 
-            // ✅ GRAVITY: Topları düşür
             await ApplyGravity();
-
-            // ✅ Boş hücreleri doldur
             await FillEmptyCells();
-
-            // ✅ Tekrar match kontrol et (chain reaction)
             await CheckAndProcessChainReactions();
 
-            Debug.Log("[GridManager] Matches processed!");
+            if (showDebugLogs)
+            {
+                Debug.Log("[GridManager] Matches processed!");
+            }
         }
 
-        /// <summary>
-        /// Gravity uygula: Topları aşağı düşür
-        /// </summary>
         private async UniTask ApplyGravity()
         {
-            if (_isDestroying) return; 
+            if (_isDestroying) return;
             
             bool hasMoved;
-            int maxIterations = gridSize; // Sonsuz döngü önleme
+            int maxIterations = gridSize;
             int iteration = 0;
 
             do
@@ -319,7 +402,6 @@ namespace _Project.Scripts.Systems.Grid
                 hasMoved = false;
                 iteration++;
 
-                // Alttan üste doğru tara
                 for (int y = 0; y < gridSize - 1; y++)
                 {
                     for (int x = 0; x < gridSize; x++)
@@ -330,16 +412,13 @@ namespace _Project.Scripts.Systems.Grid
                         GridCell currentCell = GetCell(currentPos);
                         GridCell aboveCell = GetCell(abovePos);
 
-                        // Şu an boş ve üstte ball var mı?
                         if (currentCell.IsEmpty && aboveCell.IsOccupied)
                         {
                             Ball ball = aboveCell.OccupyingBall;
 
-                            // Grid'i güncelle
                             ClearCell(abovePos);
                             SetBallToCell(currentPos, ball);
 
-                            // Animasyon (paralel olabilir)
                             ball.MoveTo(currentPos, currentCell.WorldPosition).Forget();
 
                             hasMoved = true;
@@ -347,7 +426,6 @@ namespace _Project.Scripts.Systems.Grid
                     }
                 }
 
-                // Bir frame bekle (animasyonlar için)
                 if (hasMoved)
                 {
                     await UniTask.Delay(100);
@@ -360,16 +438,12 @@ namespace _Project.Scripts.Systems.Grid
             }
         }
 
-        /// <summary>
-        /// Boş hücreleri yukarıdan yeni toplarla doldur
-        /// </summary>
         private async UniTask FillEmptyCells()
         {
             if (_isDestroying) return;
             
             List<UniTask> spawnTasks = new List<UniTask>();
 
-            // Yukarıdan aşağı tara
             for (int y = gridSize - 1; y >= 0; y--)
             {
                 for (int x = 0; x < gridSize; x++)
@@ -379,7 +453,6 @@ namespace _Project.Scripts.Systems.Grid
 
                     if (cell.IsEmpty)
                     {
-                        // Yeni ball spawn et (match oluşturmadan)
                         spawnTasks.Add(SpawnBallWithoutMatch(pos));
                     }
                 }
@@ -388,41 +461,100 @@ namespace _Project.Scripts.Systems.Grid
             await UniTask.WhenAll(spawnTasks);
         }
 
-        /// <summary>
-        /// Chain reaction: Gravity sonrası yeni match var mı kontrol et
-        /// </summary>
         private async UniTask CheckAndProcessChainReactions()
         {
             if (_isDestroying) return;
             
             int chainCount = 0;
-            int maxChains = 10; // Sonsuz döngü önleme
+            int maxChains = 10;
+            int totalMatches = 0;
+
+            _currentCombo = 0;
 
             while (chainCount < maxChains)
             {
-                // Tüm grid'de match ara
-                List<MatchResult> newMatches = CheckAllMatches();
+                if (_isDestroying) return;
 
-                if (newMatches.Count == 0)
+                await UniTask.Delay(300);
+
+                List<MatchResult> chainMatches = CheckAllMatches();
+
+                if (chainMatches == null || chainMatches.Count == 0)
                 {
-                    // Artık match yok, dur
+                    if (showDebugLogs)
+                    {
+                        Debug.Log($"[GridManager] No more chain reactions. Total chains: {chainCount}");
+                    }
+
+                    if (_currentCombo > 1 && comboEventChannel != null)
+                    {
+                        ComboEventData comboData = new ComboEventData(
+                            _currentCombo,
+                            totalMatches,
+                            Vector3.zero
+                        );
+                        
+                        comboEventChannel.RaiseEvent(comboData);
+
+                        if (showDebugLogs)
+                        {
+                            Debug.Log($"[GridManager] Combo x{_currentCombo} completed!");
+                        }
+                    }
+
                     break;
                 }
 
                 chainCount++;
-                Debug.Log($"[GridManager] Chain reaction {chainCount}: {newMatches.Count} match(es) found!");
+                _currentCombo++;
+                totalMatches += chainMatches.Count;
+                _totalMatchesThisMove += chainMatches.Count;
 
-                // Yeni match'leri işle (recursive değil, aynı process)
-                foreach (var match in newMatches)
+                if (showDebugLogs)
                 {
+                    Debug.Log($"[GridManager] Chain reaction {chainCount}! New matches: {chainMatches.Count} (Combo: {_currentCombo})");
+                }
+
+                foreach (var match in chainMatches)
+                {
+                    GridCell cell = GetCell(match.MatchedPositions[0]);
+                    BallColor matchColor = cell.OccupyingBall != null 
+                        ? cell.OccupyingBall.Color 
+                        : BallColor.Red;
+
+                    if (matchEventChannel != null)
+                    {
+                        MatchEventData data = new MatchEventData(
+                            match.MatchCount,
+                            match.MatchType,
+                            match.MatchedPositions.ToArray(),
+                            matchColor
+                        );
+                        
+                        matchEventChannel.RaiseEvent(data);
+                    }
+
                     List<UniTask> popTasks = new List<UniTask>();
 
                     foreach (var pos in match.MatchedPositions)
                     {
-                        GridCell cell = GetCell(pos);
-                        if (cell.OccupyingBall != null)
+                        GridCell matchCell = GetCell(pos);
+                        if (matchCell.OccupyingBall != null)
                         {
-                            UniTask popTask = cell.OccupyingBall.Pop();
+                            Ball ball = matchCell.OccupyingBall;
+
+                            if (ballPopEventChannel != null)
+                            {
+                                BallPopEventData popData = new BallPopEventData(
+                                    ball.transform.position,
+                                    ball.GetComponent<SpriteRenderer>()?.color ?? Color.white,
+                                    match.MatchCount
+                                );
+                                
+                                ballPopEventChannel.RaiseEvent(popData);
+                            }
+
+                            UniTask popTask = ball.Pop();
                             popTasks.Add(popTask);
                             ClearCell(pos);
                         }
@@ -433,79 +565,36 @@ namespace _Project.Scripts.Systems.Grid
 
                 await UniTask.Delay(200);
 
-                // Tekrar gravity ve fill
                 await ApplyGravity();
                 await FillEmptyCells();
             }
 
             if (chainCount >= maxChains)
             {
-                Debug.LogWarning("[GridManager] Max chain reactions reached!");
-            }
-            else if (chainCount > 0)
-            {
-                Debug.Log($"[GridManager] Chain reaction completed after {chainCount} chains!");
+                Debug.LogWarning($"[GridManager] Max chain limit reached ({maxChains})!");
             }
         }
-
-        public async UniTask SpawnBallAt(Vector2Int gridPos)
+        
+        private void NotifyProcessingComplete()
         {
-            // Pozisyon geçerli mi?
-            if (!IsValidPosition(gridPos))
+            if (gridProcessingCompleteEventChannel != null)
             {
-                Debug.LogWarning($"Invalid grid position: {gridPos}");
-                return;
-            }
+                GridProcessingCompleteEventData data = new GridProcessingCompleteEventData(
+                    _totalMatchesThisMove,
+                    0, // Score GridManager'da tutulmuyor, LevelManager'da
+                    _currentCombo > 0
+                );
 
-            // Hücre boş mu? (ref kullanmadan kontrol)
-            GridCell cell = GetCell(gridPos); // ✅ Kopya al
-            if (!cell.IsEmpty)
-            {
-                Debug.LogWarning($"Cell already occupied: {gridPos}");
-                return;
-            }
+                gridProcessingCompleteEventChannel.RaiseEvent(data);
 
-            // Random BallData seç (spawn weight'e göre)
-            BallData ballData = GetRandomBallData();
-
-            // Ball prefab'ı instantiate et
-            GameObject ballObj = Instantiate(ballPrefab, cell.WorldPosition, Quaternion.identity, ballContainer);
-            Ball ball = ballObj.GetComponent<Ball>();
-
-            // Ball'ı initialize et
-            ball.Initialize(gridPos, ballData);
-
-            // GridCell'e kaydet (direkt array erişimi)
-            _grid[gridPos.x, gridPos.y].SetBall(ball); // ✅ Bu şekilde değiştir
-
-            await UniTask.Yield(); // Bir frame bekle
-        }
-
-        private BallData GetRandomBallData()
-        {
-            // Toplam weight hesapla
-            float totalWeight = 0f;
-            foreach (var data in ballDataArray)
-            {
-                totalWeight += data.SpawnWeight;
-            }
-
-            // Random değer
-            float randomValue = Random.Range(0f, totalWeight);
-
-            // Hangi data'yı seçeceğimizi bul
-            float currentWeight = 0f;
-            foreach (var data in ballDataArray)
-            {
-                currentWeight += data.SpawnWeight;
-                if (randomValue <= currentWeight)
+                if (showDebugLogs)
                 {
-                    return data;
+                    Debug.Log($"[GridManager] Processing complete: {_totalMatchesThisMove} matches, Combo: {_currentCombo > 0}");
                 }
             }
 
-            // Fallback (olmamalı ama safety)
-            return ballDataArray[0];
+            _isProcessing = false;
+            _totalMatchesThisMove = 0;
         }
 
         public bool IsValidPosition(Vector2Int gridPos)
@@ -514,31 +603,59 @@ namespace _Project.Scripts.Systems.Grid
                    gridPos.y >= 0 && gridPos.y < gridSize;
         }
 
-        public ref GridCell GetCellRef(Vector2Int gridPos)
-        {
-            return ref _grid[gridPos.x, gridPos.y];
-        }
-
         public GridCell GetCell(Vector2Int gridPos)
         {
             if (!IsValidPosition(gridPos))
             {
-                return default; // Default GridCell (boş)
+                return default;
             }
 
             return _grid[gridPos.x, gridPos.y];
         }
 
+        public void ClearCell(Vector2Int gridPos)
+        {
+            if (!IsValidPosition(gridPos))
+            {
+                return;
+            }
+
+            _grid[gridPos.x, gridPos.y].ClearBall();
+        }
+
+        public void SetBallToCell(Vector2Int gridPos, Ball ball)
+        {
+            if (!IsValidPosition(gridPos))
+            {
+                return;
+            }
+
+            _grid[gridPos.x, gridPos.y].SetBall(ball);
+        }
+
+        public void SwapCells(Vector2Int pos1, Vector2Int pos2)
+        {
+            if (!IsValidPosition(pos1) || !IsValidPosition(pos2))
+            {
+                return;
+            }
+
+            Ball ball1 = _grid[pos1.x, pos1.y].OccupyingBall;
+            Ball ball2 = _grid[pos2.x, pos2.y].OccupyingBall;
+
+            _grid[pos1.x, pos1.y].SetBall(ball2);
+            _grid[pos2.x, pos2.y].SetBall(ball1);
+        }
+
+        public int GetGridSize() => gridSize;
+
         private BallData[] GetBallDataFromColors(BallColor[] colors)
         {
-            // Resources klasöründen BallData'ları yükle
             BallData[] allBallData = Resources.LoadAll<BallData>("Data/Balls");
-
             List<BallData> result = new List<BallData>();
 
             foreach (var color in colors)
             {
-                // İlgili renkteki BallData'yı bul
                 foreach (var data in allBallData)
                 {
                     if (data.Color == color)
@@ -552,7 +669,10 @@ namespace _Project.Scripts.Systems.Grid
             return result.ToArray();
         }
 
-        public int GetGridSize() => gridSize;
+        private void OnDestroy()
+        {
+            _isDestroying = true;
+        }
 
         private void OnDrawGizmos()
         {
@@ -560,7 +680,6 @@ namespace _Project.Scripts.Systems.Grid
 
             Gizmos.color = Color.gray;
 
-            // Grid çizgilerini çiz
             for (int x = 0; x <= gridSize; x++)
             {
                 Vector3 start = GridToWorldPosition(new Vector2Int(x, 0)) - Vector3.up * cellSize * 0.5f;
@@ -575,7 +694,6 @@ namespace _Project.Scripts.Systems.Grid
                 Gizmos.DrawLine(start, end);
             }
 
-            // Dolu hücreleri yeşil, boş hücreleri kırmızı göster
             for (int x = 0; x < gridSize; x++)
             {
                 for (int y = 0; y < gridSize; y++)
@@ -585,50 +703,6 @@ namespace _Project.Scripts.Systems.Grid
                     Gizmos.DrawWireCube(cell.WorldPosition, Vector3.one * cellSize * 0.8f);
                 }
             }
-        }
-
-        public void ClearCell(Vector2Int gridPos)
-        {
-            if (!IsValidPosition(gridPos))
-            {
-                Debug.LogWarning($"[GridManager] Invalid position: {gridPos}");
-                return;
-            }
-
-            _grid[gridPos.x, gridPos.y].ClearBall();
-        }
-
-        public void SetBallToCell(Vector2Int gridPos, Ball ball)
-        {
-            if (!IsValidPosition(gridPos))
-            {
-                Debug.LogWarning($"[GridManager] Invalid position: {gridPos}");
-                return;
-            }
-
-            _grid[gridPos.x, gridPos.y].SetBall(ball);
-        }
-
-        public void SwapCells(Vector2Int pos1, Vector2Int pos2)
-        {
-            if (!IsValidPosition(pos1) || !IsValidPosition(pos2))
-            {
-                Debug.LogWarning($"[GridManager] Invalid swap positions: {pos1}, {pos2}");
-                return;
-            }
-
-            // İki ball'ı al
-            Ball ball1 = _grid[pos1.x, pos1.y].OccupyingBall;
-            Ball ball2 = _grid[pos2.x, pos2.y].OccupyingBall;
-
-            // Swap
-            _grid[pos1.x, pos1.y].SetBall(ball2);
-            _grid[pos2.x, pos2.y].SetBall(ball1);
-        }
-        
-        private void OnDestroy()
-        {
-            _isDestroying = true;
         }
     }
 }

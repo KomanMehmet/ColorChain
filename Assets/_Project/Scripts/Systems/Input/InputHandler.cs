@@ -15,18 +15,17 @@ namespace _Project.Scripts.Systems.Input
         
         private bool _isDestroying = false;
 
-        [Header("Input Settings")] [SerializeField]
-        private float minSwipeDistance = 50f;
-
+        [Header("Input Settings")]
+        [SerializeField] private float minSwipeDistance = 50f;
         [SerializeField] private float maxSwipeTime = 1f;
 
-        [Header("Visual Feedback")] [SerializeField]
-        private bool highlightSelectedBall = true;
+        [Header("Visual Feedback")]
+        [SerializeField] private bool highlightSelectedBall = true;
 
-        [Header("Debug")] [SerializeField] private bool showDebugLogs = false;
+        [Header("Debug")]
+        [SerializeField] private bool showDebugLogs = false;
 
         private PlayerInputActions _inputActions;
-
         private Camera _mainCamera;
         private Ball _selectedBall;
         private Vector2 _touchStartPos;
@@ -36,7 +35,6 @@ namespace _Project.Scripts.Systems.Input
 
         private void Awake()
         {
-            // Singleton
             if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
@@ -45,24 +43,18 @@ namespace _Project.Scripts.Systems.Input
 
             Instance = this;
 
-            // Camera
             _mainCamera = Camera.main;
             if (_mainCamera == null)
             {
                 Debug.LogError("[InputHandler] Main Camera not found!");
             }
 
-            // Input Actions oluştur
             _inputActions = new PlayerInputActions();
         }
 
         private void OnEnable()
         {
-            // Input Actions'ı aktif et
             _inputActions.Enable();
-
-            // CALLBACK'LERİ KAYDET (Subscribe)
-            // += ile event'e abone oluyoruz
             _inputActions.Gameplay.Touch.started += OnTouchStarted;
             _inputActions.Gameplay.Touch.canceled += OnTouchEnded;
 
@@ -74,12 +66,8 @@ namespace _Project.Scripts.Systems.Input
 
         private void OnDisable()
         {
-            // CALLBACK'LERİ KALDIR (Unsubscribe)
-            // -= ile event'ten çıkıyoruz
             _inputActions.Gameplay.Touch.started -= OnTouchStarted;
             _inputActions.Gameplay.Touch.canceled -= OnTouchEnded;
-
-            // Input Actions'ı deaktif et
             _inputActions.Disable();
 
             if (showDebugLogs)
@@ -91,8 +79,6 @@ namespace _Project.Scripts.Systems.Input
         private void OnDestroy()
         {
             _isDestroying = true;
-            
-            // Input Actions'ı dispose et (memory temizliği)
             _inputActions?.Dispose();
         }
 
@@ -101,15 +87,10 @@ namespace _Project.Scripts.Systems.Input
             if (!_inputEnabled) return;
             if (GridManager.Instance == null) return;
 
-            // Touch pozisyonunu al
-            // ReadValue<Vector2>() → TouchPosition action'ından pozisyonu oku
             Vector2 touchPosition = _inputActions.Gameplay.TouchPosition.ReadValue<Vector2>();
-
-            // Ekran → Dünya koordinatı
             Vector3 worldPos = _mainCamera.ScreenToWorldPoint(touchPosition);
             worldPos.z = 0f;
 
-            // Raycast: Bu pozisyonda ball var mı?
             Collider2D hitCollider = Physics2D.OverlapPoint(worldPos);
 
             if (hitCollider != null)
@@ -118,10 +99,7 @@ namespace _Project.Scripts.Systems.Input
 
                 if (ball != null)
                 {
-                    // Ball seç
                     SelectBall(ball);
-
-                    // Touch tracking başlat
                     _touchStartPos = touchPosition;
                     _touchStartTime = Time.time;
                     _isTouching = true;
@@ -142,7 +120,6 @@ namespace _Project.Scripts.Systems.Input
 
             if (_selectedBall == null) return;
 
-            // Touch duration kontrolü
             float touchDuration = Time.time - _touchStartTime;
             if (touchDuration > maxSwipeTime)
             {
@@ -155,15 +132,10 @@ namespace _Project.Scripts.Systems.Input
                 return;
             }
 
-            // Son touch pozisyonunu al
             Vector2 touchEndPos = _inputActions.Gameplay.TouchPosition.ReadValue<Vector2>();
-
-            // Swipe delta hesapla
             Vector2 swipeDelta = touchEndPos - _touchStartPos;
             float swipeDistance = swipeDelta.magnitude;
 
-            // ✅ ÖNEMLİ: Eğer çok kısa ise sadece tap (tıklama) sayılır
-            // Tap = Sadece seçim, hareket yok
             if (swipeDistance < minSwipeDistance)
             {
                 if (showDebugLogs)
@@ -171,20 +143,16 @@ namespace _Project.Scripts.Systems.Input
                     Debug.Log($"[InputHandler] Tap detected (distance: {swipeDistance:F0}px), no move");
                 }
 
-                // Seçili bırak, hareket etme
-                return; // DeselectBall() çağırma!
+                return;
             }
 
-            // Direction hesapla
             Vector2Int direction = GetSwipeDirection(swipeDelta);
 
             if (showDebugLogs)
             {
-                Debug.Log(
-                    $"[InputHandler] Swipe detected: {direction} (distance: {swipeDistance:F0}px, time: {touchDuration:F2}s)");
+                Debug.Log($"[InputHandler] Swipe detected: {direction} (distance: {swipeDistance:F0}px, time: {touchDuration:F2}s)");
             }
 
-            // Hareketi işle
             ProcessMove(direction).Forget();
         }
 
@@ -193,19 +161,19 @@ namespace _Project.Scripts.Systems.Input
             float absX = Mathf.Abs(swipeDelta.x);
             float absY = Mathf.Abs(swipeDelta.y);
 
-            // Hangi eksen baskın?
             if (absX > absY)
             {
-                // Yatay
                 return swipeDelta.x > 0 ? Vector2Int.right : Vector2Int.left;
             }
             else
             {
-                // Dikey
                 return swipeDelta.y > 0 ? Vector2Int.up : Vector2Int.down;
             }
         }
 
+        /// <summary>
+        /// ✅ GÜNCELLEME: GridManager.ProcessMove() kullan
+        /// </summary>
         private async UniTaskVoid ProcessMove(Vector2Int direction)
         {
             if (_isDestroying) return;
@@ -227,6 +195,8 @@ namespace _Project.Scripts.Systems.Input
             }
 
             GridCell targetCell = GridManager.Instance.GetCell(targetPos);
+            
+            // ✅ Input'u kapat (processing bitene kadar)
             _inputEnabled = false;
 
             if (targetCell.IsOccupied)
@@ -238,6 +208,12 @@ namespace _Project.Scripts.Systems.Input
                     Debug.Log($"[InputHandler] Swapping balls: {currentPos} ↔ {targetPos}");
                 }
 
+                // ✅ Önce hamlede hamle sayısını azalt
+                if (LevelManager.Instance != null)
+                {
+                    LevelManager.Instance.OnMoveCompleted();
+                }
+
                 // Swap
                 GridManager.Instance.SwapCells(currentPos, targetPos);
 
@@ -246,47 +222,26 @@ namespace _Project.Scripts.Systems.Input
                 var task2 = targetBall.MoveTo(currentPos, GridManager.Instance.GetCell(currentPos).WorldPosition);
                 await UniTask.WhenAll(task1, task2);
 
-                // Match kontrol et
-                var match1 = GridManager.Instance.CheckMatchAt(currentPos);
-                var match2 = GridManager.Instance.CheckMatchAt(targetPos);
+                // ✅ GridManager.ProcessMove() ile tüm işlemi yap
+                await GridManager.Instance.ProcessMove(currentPos, targetPos);
 
-                List<MatchResult> matches = new List<MatchResult>();
-                if (match1 != null) matches.Add(match1);
-                if (match2 != null) matches.Add(match2);
-
-                if (matches.Count > 0)
-                {
-                    if (showDebugLogs)
-                    {
-                        Debug.Log($"[InputHandler] {matches.Count} match(es) found after swap!");
-                    }
-
-                    await GridManager.Instance.ProcessMatches(matches);
-                }
-                else
-                {
-                    // Match yok, geri al!
-                    if (showDebugLogs)
-                    {
-                        Debug.Log("[InputHandler] No match after swap, reverting...");
-                    }
-
-                    // Geri swap
-                    GridManager.Instance.SwapCells(targetPos, currentPos);
-
-                    // Geri animasyon (_selectedBall hala var!)
-                    var revertTask1 = _selectedBall.MoveTo(currentPos,
-                        GridManager.Instance.GetCell(currentPos).WorldPosition);
-                    var revertTask2 = targetBall.MoveTo(targetPos, targetCell.WorldPosition);
-                    await UniTask.WhenAll(revertTask1, revertTask2);
-                }
-
-                // ✅ En sonda deselect yap
+                // ✅ Deselect
                 DeselectBall();
             }
             else
             {
                 // Hedef boş: Normal hareket
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[InputHandler] Moving to empty cell: {currentPos} → {targetPos}");
+                }
+
+                // ✅ Hamlede hamle sayısını azalt
+                if (LevelManager.Instance != null)
+                {
+                    LevelManager.Instance.OnMoveCompleted();
+                }
+
                 GridManager.Instance.ClearCell(currentPos);
                 GridManager.Instance.SetBallToCell(targetPos, _selectedBall);
 
@@ -294,24 +249,25 @@ namespace _Project.Scripts.Systems.Input
 
                 DeselectBall();
 
+                // ✅ Match kontrol et
                 var match = GridManager.Instance.CheckMatchAt(targetPos);
                 if (match != null)
                 {
                     List<MatchResult> matches = new List<MatchResult> { match };
+                    
+                    // ✅ Processing başlat
                     await GridManager.Instance.ProcessMatches(matches);
+                    
+                    // ✅ Processing complete event otomatik raise edilecek
                 }
             }
 
+            // ✅ Input'u aç
             _inputEnabled = true;
 
             if (showDebugLogs)
             {
                 Debug.Log($"[InputHandler] Move completed: {currentPos} → {targetPos}");
-            }
-            
-            if (LevelManager.Instance != null)
-            {
-                LevelManager.Instance.OnMoveCompleted();
             }
         }
 
@@ -360,7 +316,6 @@ namespace _Project.Scripts.Systems.Input
             if (!_isTouching) return;
             if (_mainCamera == null) return;
 
-            // Swipe line çiz
             Vector2 currentPos = _inputActions.Gameplay.TouchPosition.ReadValue<Vector2>();
 
             Vector3 startWorld = _mainCamera.ScreenToWorldPoint(new Vector3(_touchStartPos.x, _touchStartPos.y, 10f));

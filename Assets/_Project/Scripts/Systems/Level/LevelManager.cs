@@ -1,5 +1,6 @@
 ﻿using System;
 using _Project.Scripts.Core.Enums;
+using _Project.Scripts.Core.EventChannels;
 using _Project.Scripts.Data;
 using _Project.Scripts.Systems.UI.Core;
 using _Project.Scripts.Systems.UI.Panels;
@@ -14,6 +15,11 @@ namespace _Project.Scripts.Systems.Level
         
         [Header("Current Level")]
         [SerializeField] private LevelData currentLevel;
+
+        [Header("Event Channels")] // ✅ Event channels
+        [SerializeField] private MatchEventChannel matchEventChannel;
+        [SerializeField] private ScoreEventChannel scoreEventChannel;
+        [SerializeField] private GridProcessingCompleteEventChannel  gridProcessingCompleteEventChannel;
         
         [Header("Debug")]
         [SerializeField] private bool showDebugLogs = true;
@@ -23,17 +29,18 @@ namespace _Project.Scripts.Systems.Level
         private int _currentScore;
         private LevelState _currentState;
         
+        private bool _isProcessing = false;
+        
         // Events
-        public event Action<int> OnScoreChanged;
         public event Action<int> OnMovesChanged;
         public event Action<int> OnLevelCompleted;
-        public event Action OnLevelFailed;     
+        public event Action OnLevelFailed;
         
         // Properties (read-only)
         public int RemainingMoves => _remainingMoves;
         public int CurrentScore => _currentScore;
-        public int TargetScore => currentLevel.TargetScore;
-        public int MaxMoves => currentLevel.MaxMoves;
+        public int TargetScore => currentLevel != null ? currentLevel.TargetScore : 0;
+        public int MaxMoves => currentLevel != null ? currentLevel.MaxMoves : 0;
         public LevelState CurrentState => _currentState;
         
         private void Awake()
@@ -46,32 +53,68 @@ namespace _Project.Scripts.Systems.Level
             }
             Instance = this;
         }
+
+        private void OnEnable()
+        {
+            if (matchEventChannel != null)
+            {
+                matchEventChannel.Register(OnMatchEvent);
+            }
+            
+            if (gridProcessingCompleteEventChannel != null)
+            {
+                gridProcessingCompleteEventChannel.Register(OnGridProcessingComplete);
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (matchEventChannel != null)
+            {
+                matchEventChannel.Unregister(OnMatchEvent);
+            }
+            
+            if (gridProcessingCompleteEventChannel != null)
+            {
+                gridProcessingCompleteEventChannel.Unregister(OnGridProcessingComplete);
+            }
+        }
         
         public void StartLevel(LevelData levelData)
         {
+            if (levelData == null)
+            {
+                Debug.LogError("[LevelManager] LevelData is null!");
+                return;
+            }
+
             currentLevel = levelData;
 
-            // State'i sıfırla
             _remainingMoves = currentLevel.MaxMoves;
             _currentScore = 0;
             _currentState = LevelState.Playing;
+            _isProcessing = false;
 
-            // Event'leri tetikle (UI güncellensin)
             OnMovesChanged?.Invoke(_remainingMoves);
-            OnScoreChanged?.Invoke(_currentScore);
+
+            if (scoreEventChannel != null)
+            {
+                ScoreEventData scoreData = new ScoreEventData(0, _currentScore);
+                scoreEventChannel.RaiseEvent(scoreData);
+            }
 
             if (showDebugLogs)
             {
                 Debug.Log($"[LevelManager] Level started: {currentLevel.LevelName}");
-                Debug.Log($"[LevelManager] Target Score: {currentLevel.TargetScore} | Max Moves: {currentLevel.MaxMoves}");
+                Debug.Log($"[LevelManager] Target: {currentLevel.TargetScore} | Moves: {currentLevel.MaxMoves}");
             }
         }
-        
+
         public void OnMoveCompleted()
         {
             if (_currentState != LevelState.Playing)
             {
-                return; // Level bittiyse hamle sayma
+                return;
             }
 
             _remainingMoves--;
@@ -81,58 +124,74 @@ namespace _Project.Scripts.Systems.Level
             {
                 Debug.Log($"[LevelManager] Move completed. Remaining: {_remainingMoves}");
             }
-
-            // Hamle bittikten sonra kontrol et
-            CheckLevelStatus();
         }
-
-        public void OnMatchCompleted(int matchCount, _Project.Scripts.Core.Enums.MatchType matchType)
+        
+        private void OnMatchEvent(MatchEventData data)
         {
             if (_currentState != LevelState.Playing)
             {
                 return;
             }
 
-            // Skor hesapla
-            int points = CalculateScore(matchCount, matchType);
+            _isProcessing = true;
+            
+            //Skor hesapla
+            int points = CalculateScore(data.matchCount, data.matchType);
+            int previousScore = _currentScore;
             _currentScore += points;
-
-            OnScoreChanged?.Invoke(_currentScore);
+            
+            if (scoreEventChannel != null)
+            {
+                ScoreEventData scoreData = new ScoreEventData(points, _currentScore);
+                scoreEventChannel.RaiseEvent(scoreData);
+            }
 
             if (showDebugLogs)
             {
                 Debug.Log($"[LevelManager] Match! +{points} points (Total: {_currentScore}/{currentLevel.TargetScore})");
             }
+        }
+        
+        private void OnGridProcessingComplete(GridProcessingCompleteEventData data)
+        {
+            if (_currentState != LevelState.Playing)
+            {
+                return;
+            }
+            
+            _isProcessing = false;
 
-            // Match sonrası kontrol et
+            if (showDebugLogs)
+            {
+                Debug.Log($"[LevelManager] Processing complete: {data}");
+                Debug.Log($"[LevelManager] Final score: {_currentScore}, Remaining moves: {_remainingMoves}");
+            }
+
             CheckLevelStatus();
         }
         
-        private int CalculateScore(int matchCount, _Project.Scripts.Core.Enums.MatchType matchType)
+        private int CalculateScore(int matchCount, MatchType matchType)
         {
             const int BASE_POINTS = 10;
             const int COMBO_BONUS = 5;
             const int MIN_MATCH = 3;
-
-            // Base score
+            
             int baseScore = matchCount * BASE_POINTS;
-
-            // Match type multiplier
+            
             float multiplier = 1f;
             switch (matchType)
             {
-                case _Project.Scripts.Core.Enums.MatchType.Horizontal:
-                case _Project.Scripts.Core.Enums.MatchType.Vertical:
+                case MatchType.Horizontal:
+                case MatchType.Vertical:
                     multiplier = 1f;
                     break;
-                case _Project.Scripts.Core.Enums.MatchType.Cross:
+                case MatchType.Cross:
                     multiplier = 1.5f;
                     break;
             }
 
             int score = Mathf.RoundToInt(baseScore * multiplier);
-
-            // Combo bonus (3'ten fazla ball varsa)
+            
             if (matchCount > MIN_MATCH)
             {
                 int extraBalls = matchCount - MIN_MATCH;
@@ -144,27 +203,31 @@ namespace _Project.Scripts.Systems.Level
         
         private void CheckLevelStatus()
         {
-            // Zaten bittiyse kontrol etme
             if (_currentState != LevelState.Playing)
             {
                 return;
             }
+            
+            if (_isProcessing)
+            {
+                if (showDebugLogs)
+                {
+                    Debug.Log("[LevelManager] Still processing, level check deferred");
+                }
+                return;
+            }
 
-            // KAZANMA KONTROLÜ: Hedef skora ulaştı mı?
             if (_currentScore >= currentLevel.TargetScore)
             {
                 CompleteLevelSuccess();
                 return;
             }
-
-            // KAYBETME KONTROLÜ: Hamle kalmadı mı?
+            
             if (_remainingMoves <= 0)
             {
                 CompleteLevelFailed();
                 return;
             }
-
-            // Devam ediyor
         }
         
         private void CompleteLevelSuccess()
@@ -177,10 +240,9 @@ namespace _Project.Scripts.Systems.Level
             {
                 Debug.Log($"[LevelManager] LEVEL COMPLETED! Score: {_currentScore} | Stars: {stars}⭐");
             }
-
+            
             OnLevelCompleted?.Invoke(stars);
-
-            // ✅ UI Panel'i otomatik göster
+            
             ShowLevelCompletePanel(stars).Forget();
         }
         
@@ -193,15 +255,18 @@ namespace _Project.Scripts.Systems.Level
                 Debug.Log($"[LevelManager] LEVEL FAILED! Score: {_currentScore}/{currentLevel.TargetScore}");
             }
 
+            // Local event
             OnLevelFailed?.Invoke();
 
-            // ✅ UI Panel'i otomatik göster
+            // UI Panel göster
             ShowLevelFailedPanel().Forget();
         }
-
+        
         private async UniTaskVoid ShowLevelCompletePanel(int stars)
         {
-            await UniTask.Delay(500); // Biraz bekle (son animasyonlar bitsin)
+            await UniTask.Delay(500);
+
+            if (UIManager.Instance == null) return;
 
             var completePanel = UIManager.Instance.GetPanel<LevelCompletePanel>();
             if (completePanel != null)
@@ -214,6 +279,8 @@ namespace _Project.Scripts.Systems.Level
         {
             await UniTask.Delay(500);
 
+            if (UIManager.Instance == null) return;
+
             var failedPanel = UIManager.Instance.GetPanel<LevelFailedPanel>();
             if (failedPanel != null)
             {
@@ -223,22 +290,24 @@ namespace _Project.Scripts.Systems.Level
         
         private int CalculateStars()
         {
+            if (currentLevel == null) return 1;
+
             float scorePercentage = (float)_currentScore / currentLevel.TargetScore;
 
             if (scorePercentage >= 1.5f)
             {
-                return 3; // ⭐⭐⭐
+                return 3;
             }
             else if (scorePercentage >= 1.2f)
             {
-                return 2; // ⭐⭐
+                return 2;
             }
             else
             {
-                return 1; // ⭐
+                return 1; 
             }
         }
-        
+
         public void RestartLevel()
         {
             if (currentLevel == null)
@@ -248,18 +317,32 @@ namespace _Project.Scripts.Systems.Level
             }
 
             StartLevel(currentLevel);
+
+            // Grid'i de restart et
+            if (Grid.GridManager.Instance != null)
+            {
+                Grid.GridManager.Instance.Initialize(currentLevel);
+            }
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[LevelManager] Level restarted");
+            }
         }
         
         public void LoadNextLevel()
         {
-            // TODO: Level listesi olacak, sıradakini yükle
+            // TODO: Level listesi
             Debug.Log("[LevelManager] Next level not implemented yet");
         }
-        
+
         private void OnDestroy()
         {
-            // Event'leri temizle (memory leak önleme)
-            OnScoreChanged = null;
+            if (matchEventChannel != null)
+            {
+                matchEventChannel.Unregister(OnMatchEvent);
+            }
+            
             OnMovesChanged = null;
             OnLevelCompleted = null;
             OnLevelFailed = null;
