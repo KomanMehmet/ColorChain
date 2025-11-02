@@ -20,8 +20,7 @@ namespace _Project.Scripts.Systems.UI.Panels
         protected override void Awake()
         {
             base.Awake();
-
-            // Button listeners
+            
             if (restartButton != null)
             {
                 restartButton.onClick.AddListener(OnRestartClicked);
@@ -33,9 +32,6 @@ namespace _Project.Scripts.Systems.UI.Panels
             }
         }
 
-        /// <summary>
-        /// Panel'i göster ve bilgileri güncelle
-        /// </summary>
         public async UniTask ShowWithScore(int currentScore, int targetScore)
         {
             // Mesajı güncelle
@@ -49,46 +45,37 @@ namespace _Project.Scripts.Systems.UI.Panels
             {
                 scoreText.text = $"Score: {currentScore} / {targetScore}";
             }
-
-            // Panel'i göster
+            
             await Show();
         }
-
-        /// <summary>
-        /// Restart butonuna tıklandı
-        /// </summary>
+        
         private void OnRestartClicked()
         {
             Debug.Log("[LevelFailedPanel] Restart clicked");
-
-            // Panel'i kapat
+            
             Hide().Forget();
 
-            // Level'ı yeniden başlat
             if (LevelManager.Instance != null)
             {
                 LevelManager.Instance.RestartLevel();
             }
 
-            // Grid'i yeniden oluştur
             if (GridManager.Instance != null)
             {
                 // TODO: GridManager.Instance.RestartGrid();
             }
         }
         
-        /// <summary>
-        /// Main Menu butonuna tıklandı
-        /// </summary>
         private void OnMainMenuClicked()
         {
             Debug.Log("[LevelFailedPanel] Main Menu clicked");
-
-            // Panel'i kapat
+            
             Hide().Forget();
 
-            // TODO: Ana menüye dön
-            // SceneManager.LoadScene("MainMenu");
+            if (SceneManagement.SceneManager.Instance != null)
+            {
+                SceneManagement.SceneManager.Instance.LoadMainMenu();
+            }
         }
         
         protected override void OnDestroy()

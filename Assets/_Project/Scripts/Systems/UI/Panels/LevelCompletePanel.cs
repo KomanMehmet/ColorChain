@@ -17,6 +17,7 @@ namespace _Project.Scripts.Systems.UI.Panels
         [SerializeField] private Image[] starImages;
         [SerializeField] private Button nextLevelButton;
         [SerializeField] private Button restartButton;
+        [SerializeField] private Button menuButton;
         
         [Header("Star Settings")]
         [SerializeField] private Sprite starFilledSprite;
@@ -28,8 +29,7 @@ namespace _Project.Scripts.Systems.UI.Panels
         protected override void Awake()
         {
             base.Awake();
-
-            // Button listeners
+            
             if (nextLevelButton != null)
             {
                 nextLevelButton.onClick.AddListener(OnNextLevelClicked);
@@ -39,36 +39,31 @@ namespace _Project.Scripts.Systems.UI.Panels
             {
                 restartButton.onClick.AddListener(OnRestartClicked);
             }
+            
+            if (menuButton != null)
+            {
+                menuButton.onClick.AddListener(OnMenuClicked);
+            }
         }
-        
-        /// <summary>
-        /// Panel'i göster ve yıldızları animasyonla doldur
-        /// </summary>
+
         public async UniTask ShowWithStars(int stars, int finalScore)
         {
             _earnedStars = stars;
 
-            // Skoru güncelle
             if (scoreText != null)
             {
                 scoreText.text = $"Score: {finalScore}";
             }
 
-            // Panel'i göster
             await Show();
 
-            // Yıldız animasyonlarını başlat
             await AnimateStars();
         }
         
-        // <summary>
-        /// Yıldızları animasyonla göster
-        /// </summary>
         private async UniTask AnimateStars()
         {
             if (starImages == null || starImages.Length == 0) return;
-
-            // Başlangıçta tüm yıldızları boş yap
+            
             for (int i = 0; i < starImages.Length; i++)
             {
                 if (starImages[i] != null)
@@ -77,23 +72,19 @@ namespace _Project.Scripts.Systems.UI.Panels
                     starImages[i].transform.localScale = Vector3.zero;
                 }
             }
-
-            // Her yıldızı sırayla animasyonla doldur
+            
             for (int i = 0; i < _earnedStars && i < starImages.Length; i++)
             {
                 await UniTask.Delay((int)(starAnimationDelay * 1000));
 
                 if (starImages[i] != null)
                 {
-                    // Yıldızı doldur
                     starImages[i].sprite = starFilledSprite;
-
-                    // Scale animasyonu
+                    
                     starImages[i].transform.localScale = Vector3.zero;
                     starImages[i].transform.DOScale(Vector3.one, 0.5f)
                         .SetEase(Ease.OutElastic);
 
-                    // Rotate animasyonu
                     starImages[i].transform.DORotate(new Vector3(0, 0, 360), 0.5f, RotateMode.FastBeyond360)
                         .SetEase(Ease.OutQuad);
 
@@ -102,37 +93,27 @@ namespace _Project.Scripts.Systems.UI.Panels
             }
         }
         
-        /// <summary>
-        /// Next Level butonuna tıklandı
-        /// </summary>
         private void OnNextLevelClicked()
         {
             Debug.Log("[LevelCompletePanel] Next Level clicked");
-
-            // Panel'i kapat
+            
             Hide().Forget();
 
             // TODO: Sonraki level'ı yükle
             // LevelManager.Instance.LoadNextLevel();
         }
-        
-        /// <summary>
-        /// Restart butonuna tıklandı
-        /// </summary>
+
         private void OnRestartClicked()
         {
             Debug.Log("[LevelCompletePanel] Restart clicked");
-
-            // Panel'i kapat
+            
             Hide().Forget();
-
-            // Level'ı yeniden başlat
+            
             if (LevelManager.Instance != null)
             {
-                Level.LevelManager.Instance.RestartLevel();
+                LevelManager.Instance.RestartLevel();
             }
 
-            // Grid'i yeniden oluştur
             if (GridManager.Instance != null)
             {
                 // GridManager'ın restart methodu gerekecek
@@ -140,11 +121,22 @@ namespace _Project.Scripts.Systems.UI.Panels
             }
         }
         
+        private void OnMenuClicked()
+        {
+            Debug.Log("[LevelCompletePanel] MeinMenu clicked");
+            
+            Hide().Forget();
+            
+            if (SceneManagement.SceneManager.Instance != null)
+            {
+                SceneManagement.SceneManager.Instance.LoadMainMenu();
+            }
+        }
+        
         protected override void OnDestroy()
         {
             base.OnDestroy();
-
-            // Button listener temizliği
+            
             if (nextLevelButton != null)
             {
                 nextLevelButton.onClick.RemoveListener(OnNextLevelClicked);
@@ -153,6 +145,11 @@ namespace _Project.Scripts.Systems.UI.Panels
             if (restartButton != null)
             {
                 restartButton.onClick.RemoveListener(OnRestartClicked);
+            }
+            
+            if (menuButton != null)
+            {
+                menuButton.onClick.RemoveListener(OnMenuClicked);
             }
         }
     }
