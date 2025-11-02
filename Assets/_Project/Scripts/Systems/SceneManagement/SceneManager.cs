@@ -10,6 +10,7 @@ namespace _Project.Scripts.Systems.SceneManagement
         
         [Header("Scene Name")]
         [SerializeField] private string mainMenuSceneName = "MainMenu";
+        [SerializeField] private string levelSelectionSceneName = "LevelSelection";
         [SerializeField] private string gameplaySceneName = "Gameplay";
         
         [Header("Transition")]
@@ -25,6 +26,7 @@ namespace _Project.Scripts.Systems.SceneManagement
         public string CurrentSceneName => _currentSceneName;
         public string MainMenuSceneName => mainMenuSceneName;
         public string GameplaySceneName => gameplaySceneName;
+        public string LevelSelectionSceneName => levelSelectionSceneName;
 
         private void Awake()
         {
@@ -96,6 +98,11 @@ namespace _Project.Scripts.Systems.SceneManagement
         public void LoadGameplay()
         {
             LoadScene(gameplaySceneName);
+        }
+        
+        public void LoadLevelSelection()
+        {
+            LoadScene(levelSelectionSceneName);
         }
 
         public void ReloadCurrentScene()

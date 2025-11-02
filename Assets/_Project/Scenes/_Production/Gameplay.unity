@@ -676,7 +676,7 @@ MonoBehaviour:
   levelNameText: {fileID: 1572414172}
   scoreText: {fileID: 55816384}
   movesText: {fileID: 587335787}
-  menuButton: {fileID: 0}
+  menuButton: {fileID: 594138007}
   scoreEventChannel: {fileID: 11400000, guid: 34b28b38c2bbe9d40ab81ea9b49df72d, type: 2}
   animateScoreChange: 1
   animateMovesChange: 1
@@ -2160,55 +2160,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 966139116}
   m_CullTransparentMesh: 1
---- !u!1 &976786436
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 976786438}
-  - component: {fileID: 976786437}
-  m_Layer: 0
-  m_Name: LevelManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &976786437
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 976786436}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3d203262e95242d6a9e6ecb0d236dfd2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Systems.Level.LevelManager
-  currentLevel: {fileID: 11400000, guid: a7b0a50f2b5adad4fb195fd3f2069682, type: 2}
-  matchEventChannel: {fileID: 11400000, guid: 3f0589213b40e394394289ae85bf6928, type: 2}
-  scoreEventChannel: {fileID: 11400000, guid: 34b28b38c2bbe9d40ab81ea9b49df72d, type: 2}
-  gridProcessingCompleteEventChannel: {fileID: 11400000, guid: 4fce2372bf9f5e2439ce35d8e4b180ad, type: 2}
-  showDebugLogs: 1
---- !u!4 &976786438
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 976786436}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1057768281
 GameObject:
   m_ObjectHideFlags: 0
@@ -3495,7 +3446,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 9
+  orthographic size: 15
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -4637,6 +4588,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1870651576}
   - component: {fileID: 1870651575}
+  - component: {fileID: 1870651577}
   m_Layer: 0
   m_Name: LevelStarter
   m_TagString: Untagged
@@ -4673,6 +4625,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1870651577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1870651574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dc98bc9fe15462bbc6ee51e1c012daf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Systems.Level.GameplaySceneLoader
+  showDebugLogs: 1
 --- !u!1 &1909226253
 GameObject:
   m_ObjectHideFlags: 0
@@ -4890,7 +4855,6 @@ SceneRoots:
   - {fileID: 1057768282}
   - {fileID: 1870651576}
   - {fileID: 402536444}
-  - {fileID: 976786438}
   - {fileID: 133017559}
   - {fileID: 207826282}
   - {fileID: 201759124}

@@ -9,11 +9,11 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/_Production/MainMenu.unity
     guid: 831dfc04a44c89341a4736ce7524c92c
   - enabled: 1
+    path: Assets/_Project/Scenes/_Production/LevelSelection.unity
+    guid: 3f66759768a634342994cc4b3416db10
+  - enabled: 1
     path: Assets/_Project/Scenes/_Production/Gameplay.unity
     guid: ab702e46bf38c7a459e5513b90d19b60
-  - enabled: 0
-    path: Assets/_Project/Scenes/_Development/TestScene.unity
-    guid: faecf50517240c7409c22465f48308eb
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

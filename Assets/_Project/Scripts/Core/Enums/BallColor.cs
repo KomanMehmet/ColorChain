@@ -6,6 +6,7 @@
         Blue = 1,
         Green = 2,
         Yellow = 3,
-        Purple = 4   
+        Purple = 4,
+        Orange = 5
     }
 }

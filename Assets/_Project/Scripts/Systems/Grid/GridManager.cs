@@ -54,7 +54,7 @@ namespace _Project.Scripts.Systems.Grid
             Application.targetFrameRate = 60;
 
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+           // DontDestroyOnLoad(gameObject);
         }
 
         public void Initialize(LevelData levelData)
@@ -64,6 +64,8 @@ namespace _Project.Scripts.Systems.Grid
                 Debug.LogError("[GridManager] LevelData is null!");
                 return;
             }
+            
+            //ClearGrid();
 
             gridSize = levelData.GridSize;
             ballDataArray = GetBallDataFromColors(levelData.AvailableColors);
@@ -256,12 +258,10 @@ namespace _Project.Scripts.Systems.Grid
             {
                 Debug.Log($"[GridManager] Processing move: {pos1} <-> {pos2}");
             }
-
-            // ✅ Processing başladı
+            
             _isProcessing = true;
             _totalMatchesThisMove = 0;
-
-            // Match kontrol et
+            
             List<MatchResult> matches = new List<MatchResult>();
 
             MatchResult match1 = CheckMatchAt(pos1);
@@ -286,7 +286,6 @@ namespace _Project.Scripts.Systems.Grid
             }
             else
             {
-                // Match yok, swap geri al
                 if (showDebugLogs)
                 {
                     Debug.Log("[GridManager] No match found, reverting swap");
@@ -306,8 +305,7 @@ namespace _Project.Scripts.Systems.Grid
                 {
                     await ball2.MoveTo(pos2, GetCell(pos2).WorldPosition);
                 }
-
-                // ✅ Processing bitti (match olmasa da)
+                
                 NotifyProcessingComplete();
             }
         }
@@ -325,8 +323,7 @@ namespace _Project.Scripts.Systems.Grid
             {
                 Debug.Log($"[GridManager] Processing {matches.Count} match(es)");
             }
-
-            // ✅ Her match için event raise et
+            
             foreach (var match in matches)
             {
                 GridCell cell = GetCell(match.MatchedPositions[0]);
@@ -667,6 +664,47 @@ namespace _Project.Scripts.Systems.Grid
             }
 
             return result.ToArray();
+        }
+
+        public void ClearGrid()
+        {
+            if (_isDestroying) return;
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[GridManager] Clearing grid...");
+            }
+
+            // Tüm ball'ları yok et
+            if (_grid != null)
+            {
+                for (int x = 0; x < gridSize; x++)
+                {
+                    for (int y = 0; y < gridSize; y++)
+                    {
+                        GridCell cell = _grid[x, y];
+                        Destroy(cell.OccupyingBall.gameObject);
+                        cell.ClearBall();
+                    }
+                }
+            }
+
+            // Ball container'daki tüm child'ları temizle (emin olmak için)
+            if (ballContainer != null)
+            {
+                foreach (Transform child in ballContainer)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            // Grid array'ini sıfırla
+            _grid = null;
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[GridManager] Grid cleared!");
+            }
         }
 
         private void OnDestroy()

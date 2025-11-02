@@ -16,7 +16,7 @@ namespace _Project.Scripts.Systems.Level
         [Header("Current Level")]
         [SerializeField] private LevelData currentLevel;
 
-        [Header("Event Channels")] // ✅ Event channels
+        [Header("Event Channels")]
         [SerializeField] private MatchEventChannel matchEventChannel;
         [SerializeField] private ScoreEventChannel scoreEventChannel;
         [SerializeField] private GridProcessingCompleteEventChannel  gridProcessingCompleteEventChannel;
@@ -36,7 +36,7 @@ namespace _Project.Scripts.Systems.Level
         public event Action<int> OnLevelCompleted;
         public event Action OnLevelFailed;
         
-        // Properties (read-only)
+        // Properties
         public int RemainingMoves => _remainingMoves;
         public int CurrentScore => _currentScore;
         public int TargetScore => currentLevel != null ? currentLevel.TargetScore : 0;
@@ -52,6 +52,7 @@ namespace _Project.Scripts.Systems.Level
                 return;
             }
             Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         private void OnEnable()
@@ -140,7 +141,6 @@ namespace _Project.Scripts.Systems.Level
 
             _isProcessing = true;
             
-            //Skor hesapla
             int points = CalculateScore(data.matchCount, data.matchType);
             int previousScore = _currentScore;
             _currentScore += points;
@@ -240,6 +240,16 @@ namespace _Project.Scripts.Systems.Level
             _currentState = LevelState.Completed;
 
             int stars = CalculateStars();
+            
+            if (LevelDataManager.Instance != null && currentLevel != null)
+            {
+                int levelIndex = Array.IndexOf(LevelDataManager.Instance.AllLevels, currentLevel);
+        
+                if (levelIndex >= 0)
+                {
+                    LevelDataManager.Instance.CompleteLevel(levelIndex, stars, _currentScore);
+                }
+            }
             
             if (Audio.AudioManager.Instance != null)
             {
@@ -347,8 +357,69 @@ namespace _Project.Scripts.Systems.Level
         
         public void LoadNextLevel()
         {
-            // TODO: Level listesi
-            Debug.Log("[LevelManager] Next level not implemented yet");
+            if (LevelDataManager.Instance == null)
+            {
+                Debug.LogError("[LevelManager] LevelDataManager not found!");
+                return;
+            }
+            
+            if (currentLevel == null)
+            {
+                Debug.LogError("[LevelManager] No current level!");
+                return;
+            }
+            
+            int currentLevelIndex = Array.IndexOf(LevelDataManager.Instance.AllLevels, currentLevel);
+
+            if (currentLevelIndex < 0)
+            {
+                Debug.LogError("[LevelManager] Current level not found in level list!");
+                return;
+            }
+            
+            int nextLevelIndex = currentLevelIndex + 1;
+            
+            if (nextLevelIndex >= LevelDataManager.Instance.GetTotalLevels())
+            {
+                Debug.Log("[LevelManager] No more levels! Going to level selection...");
+                
+                if (SceneManagement.SceneManager.Instance != null)
+                {
+                    SceneManagement.SceneManager.Instance.LoadLevelSelection();
+                }
+                return;
+            }
+            
+            if (!LevelDataManager.Instance.IsLevelUnlocked(nextLevelIndex))
+            {
+                Debug.LogWarning($"[LevelManager] Level {nextLevelIndex} is locked! Going to level selection...");
+                
+                if (SceneManagement.SceneManager.Instance != null)
+                {
+                    SceneManagement.SceneManager.Instance.LoadLevelSelection();
+                }
+                return;
+            }
+            
+            LevelData nextLevelData = LevelDataManager.Instance.GetLevelData(nextLevelIndex);
+
+            if (nextLevelData == null)
+            {
+                Debug.LogError($"[LevelManager] Next level data not found for index {nextLevelIndex}!");
+                return;
+            }
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[LevelManager] Loading next level: {nextLevelData.LevelName}");
+            }
+
+            GameplaySceneLoader.PendingLevelData = nextLevelData;
+            
+            if (SceneManagement.SceneManager.Instance != null)
+            {
+                SceneManagement.SceneManager.Instance.LoadGameplay();
+            }
         }
 
         private void OnDestroy()

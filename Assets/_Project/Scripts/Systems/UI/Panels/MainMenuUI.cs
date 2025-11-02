@@ -76,9 +76,14 @@ namespace _Project.Scripts.Systems.UI.Panels
                 AudioManager.Instance.PlaySFX("buttonclick");
             }
 
-            if (SceneManagement.SceneManager.Instance != null)
+            /*if (SceneManagement.SceneManager.Instance != null)
             {
                 SceneManagement.SceneManager.Instance.LoadGameplay();
+            }*/
+            
+            if (SceneManagement.SceneManager.Instance != null)
+            {
+                SceneManagement.SceneManager.Instance.LoadScene("LevelSelection");
             }
         }
 

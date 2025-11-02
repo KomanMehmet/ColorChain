@@ -99,8 +99,10 @@ namespace _Project.Scripts.Systems.UI.Panels
             
             Hide().Forget();
 
-            // TODO: Sonraki level'ı yükle
-            // LevelManager.Instance.LoadNextLevel();
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.LoadNextLevel();
+            }
         }
 
         private void OnRestartClicked()

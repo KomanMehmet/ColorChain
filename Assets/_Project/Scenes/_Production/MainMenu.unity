@@ -119,6 +119,55 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &3027450
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3027452}
+  - component: {fileID: 3027451}
+  m_Layer: 0
+  m_Name: LevelDataManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &3027451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3027450}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 822abdffc8fd427f82c9d4dd805e768f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Systems.Level.LevelDataManager
+  allLevels:
+  - {fileID: 11400000, guid: a7b0a50f2b5adad4fb195fd3f2069682, type: 2}
+  - {fileID: 11400000, guid: ffe4da32a39a2384daed7765b3959492, type: 2}
+  - {fileID: 11400000, guid: bf01d8f9ba577c349aecc9b9eed24b3d, type: 2}
+  showDebugLogs: 1
+--- !u!4 &3027452
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3027450}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &39100213
 GameObject:
   m_ObjectHideFlags: 0
@@ -548,6 +597,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 320074858}
   m_CullTransparentMesh: 1
+--- !u!1 &334816353
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 334816355}
+  - component: {fileID: 334816354}
+  m_Layer: 0
+  m_Name: LevelManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &334816354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 334816353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d203262e95242d6a9e6ecb0d236dfd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Systems.Level.LevelManager
+  currentLevel: {fileID: 11400000, guid: a7b0a50f2b5adad4fb195fd3f2069682, type: 2}
+  matchEventChannel: {fileID: 11400000, guid: 3f0589213b40e394394289ae85bf6928, type: 2}
+  scoreEventChannel: {fileID: 11400000, guid: 34b28b38c2bbe9d40ab81ea9b49df72d, type: 2}
+  gridProcessingCompleteEventChannel: {fileID: 11400000, guid: 4fce2372bf9f5e2439ce35d8e4b180ad, type: 2}
+  showDebugLogs: 1
+--- !u!4 &334816355
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 334816353}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &340465637
 GameObject:
   m_ObjectHideFlags: 0
@@ -766,7 +864,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: PLAY
+  m_text: LEVEL SELECT
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -793,7 +891,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 72
+  m_fontSize: 62.55
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -950,6 +1048,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Systems.SceneManagement.SceneManager
   mainMenuSceneName: MainMenu
+  levelSelectionSceneName: LevelSelection
   gameplaySceneName: Gameplay
   sceneTransition: {fileID: 1201168693}
   transitionDuration: 0.5
@@ -2713,7 +2812,7 @@ GameObject:
   - component: {fileID: 1355433179}
   - component: {fileID: 1355433178}
   m_Layer: 5
-  m_Name: PlayButton
+  m_Name: LevelSelectionButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5042,3 +5141,5 @@ SceneRoots:
   - {fileID: 1262024077}
   - {fileID: 1357739695}
   - {fileID: 610367197}
+  - {fileID: 3027452}
+  - {fileID: 334816355}
