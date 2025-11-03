@@ -68,6 +68,16 @@ namespace _Project.Scripts.Systems.Grid
 
             gridSize = levelData.GridSize;
             ballDataArray = GetBallDataFromColors(levelData.AvailableColors);
+            
+            if (levelData.GridSeed > 0)
+            {
+                Random.InitState(levelData.GridSeed);
+        
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[GridManager] Random seed set to: {levelData.GridSeed}");
+                }
+            }
 
             _matchChecker = new MatchChecker(this);
 

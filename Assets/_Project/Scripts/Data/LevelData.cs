@@ -13,6 +13,7 @@ namespace _Project.Scripts.Data
         [Header("Grid Settings")]
         [Range(6, 10)]
         [SerializeField] private int gridSize = 8;
+        [SerializeField] private int gridSeed = 0;
         
         [Header("Gameplay Settings")]
         [SerializeField] private int maxMoves = 20;
@@ -40,6 +41,8 @@ namespace _Project.Scripts.Data
         public int LevelNumber => levelNumber;
         public string LevelName => levelName;
         public int GridSize => gridSize;
+        
+        public int GridSeed => gridSeed;
         public int MaxMoves => maxMoves;
         public int TargetScore => targetScore;
         public int TwoStarScore => twoStarScore;
@@ -59,17 +62,21 @@ namespace _Project.Scripts.Data
         
         private void OnValidate()
         {
-            // Level number pozitif olmalı
             if (levelNumber < 1)
             {
                 levelNumber = 1;
             }
-
-            // Grid size çift sayı olmalı (optional ama güzel görünür)
-            if (gridSize % 2 != 0)
+            
+            if (gridSeed == 0)
+            {
+                gridSeed = Random.Range(1000, 999999);
+                UnityEditor.EditorUtility.SetDirty(this);
+            }
+            
+            /*if (gridSize % 2 != 0)
             {
                 gridSize = Mathf.Clamp(gridSize + 1, 6, 10);
-            }
+            }*/
             
             if (maxMoves < 5)
             {

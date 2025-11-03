@@ -15,10 +15,11 @@ MonoBehaviour:
   levelNumber: 1
   levelName: Level 1
   gridSize: 6
+  gridSeed: 123456
   maxMoves: 20
-  targetScore: 500
-  twoStarScore: 1500
-  threeStarScore: 2000
+  targetScore: 400
+  twoStarScore: 450
+  threeStarScore: 500
   availableColors: 00000000010000000200000003000000
   powerUpsEnabled: 0
   powerUpSpawnRate: 5

@@ -14,11 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Data.LevelData
   levelNumber: 3
   levelName: Level 3
-  gridSize: 10
+  gridSize: 8
+  gridSeed: 345678
   maxMoves: 15
-  targetScore: 1200
-  twoStarScore: 1500
-  threeStarScore: 2000
+  targetScore: 800
+  twoStarScore: 850
+  threeStarScore: 900
   availableColors: 000000000100000002000000030000000400000005000000
   powerUpsEnabled: 0
   powerUpSpawnRate: 5
