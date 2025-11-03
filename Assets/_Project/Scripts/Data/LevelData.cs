@@ -70,27 +70,24 @@ namespace _Project.Scripts.Data
             {
                 gridSize = Mathf.Clamp(gridSize + 1, 6, 10);
             }
-
-            // Max moves en az 5 olmalı
+            
             if (maxMoves < 5)
             {
                 maxMoves = 5;
             }
-
-            // Skor thresholdları mantıklı mı?
+            
             if (twoStarScore <= targetScore)
             {
-                twoStarScore = targetScore + 500;
+                twoStarScore = targetScore + 50;
                 Debug.LogWarning("[LevelData] Two-star score must be higher than target score!");
             }
 
             if (threeStarScore <= twoStarScore)
             {
-                threeStarScore = twoStarScore + 500;
+                threeStarScore = twoStarScore + 100;
                 Debug.LogWarning("[LevelData] Three-star score must be higher than two-star score!");
             }
-
-            // En az 2 renk olmalı
+            
             if (availableColors == null || availableColors.Length < 2)
             {
                 availableColors = new BallColor[] { BallColor.Red, BallColor.Blue, BallColor.Green };

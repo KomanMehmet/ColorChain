@@ -340,14 +340,14 @@ namespace _Project.Scripts.Systems.Level
                 Debug.LogError("[LevelManager] No level to restart!");
                 return;
             }
-
-            StartLevel(currentLevel);
-
-            // Grid'i de restart et
+            
             if (Grid.GridManager.Instance != null)
             {
+                Grid.GridManager.Instance.ClearGrid();
                 Grid.GridManager.Instance.Initialize(currentLevel);
             }
+            
+            StartLevel(currentLevel);
 
             if (showDebugLogs)
             {

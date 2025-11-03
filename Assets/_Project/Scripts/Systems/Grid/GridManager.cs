@@ -31,7 +31,7 @@ namespace _Project.Scripts.Systems.Grid
         [SerializeField] private MatchEventChannel matchEventChannel;
         [SerializeField] private ComboEventChannel comboEventChannel;
         [SerializeField] private BallPopEventChannel ballPopEventChannel;
-        [SerializeField] private GridProcessingCompleteEventChannel gridProcessingCompleteEventChannel; // ✅ YENİ
+        [SerializeField] private GridProcessingCompleteEventChannel gridProcessingCompleteEventChannel;
 
         [Header("Debug")]
         [SerializeField] private bool showDebugLogs = true;
@@ -54,7 +54,6 @@ namespace _Project.Scripts.Systems.Grid
             Application.targetFrameRate = 60;
 
             Instance = this;
-           // DontDestroyOnLoad(gameObject);
         }
 
         public void Initialize(LevelData levelData)
@@ -64,8 +63,8 @@ namespace _Project.Scripts.Systems.Grid
                 Debug.LogError("[GridManager] LevelData is null!");
                 return;
             }
-            
-            //ClearGrid();
+
+            ClearGrid();
 
             gridSize = levelData.GridSize;
             ballDataArray = GetBallDataFromColors(levelData.AvailableColors);
@@ -89,6 +88,58 @@ namespace _Project.Scripts.Systems.Grid
             if (showDebugLogs)
             {
                 Debug.Log($"[GridManager] Initialized: {gridSize}x{gridSize} grid");
+            }
+        }
+        
+        public void ClearGrid()
+        {
+            if (_isDestroying) return;
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[GridManager] Clearing grid...");
+            }
+            
+            if (_grid != null)
+            {
+                for (int x = 0; x < gridSize; x++)
+                {
+                    for (int y = 0; y < gridSize; y++)
+                    {
+                        GridCell cell = _grid[x, y];
+                
+                        if (cell.OccupyingBall != null)
+                        {
+                            Destroy(cell.OccupyingBall.gameObject);
+                            cell.ClearBall();
+                        }
+                    }
+                }
+            }
+            
+            if (ballContainer != null)
+            {
+                List<GameObject> childrenToDestroy = new List<GameObject>();
+        
+                foreach (Transform child in ballContainer)
+                {
+                    childrenToDestroy.Add(child.gameObject);
+                }
+
+                foreach (var child in childrenToDestroy)
+                {
+                    if (child != null)
+                    {
+                        Destroy(child);
+                    }
+                }
+            }
+            
+            _grid = null;
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[GridManager] Grid cleared!");
             }
         }
 
@@ -666,16 +717,10 @@ namespace _Project.Scripts.Systems.Grid
             return result.ToArray();
         }
 
-        public void ClearGrid()
+        private void OnDestroy()
         {
-            if (_isDestroying) return;
-
-            if (showDebugLogs)
-            {
-                Debug.Log("[GridManager] Clearing grid...");
-            }
-
-            // Tüm ball'ları yok et
+            _isDestroying = true;
+            
             if (_grid != null)
             {
                 for (int x = 0; x < gridSize; x++)
@@ -683,33 +728,14 @@ namespace _Project.Scripts.Systems.Grid
                     for (int y = 0; y < gridSize; y++)
                     {
                         GridCell cell = _grid[x, y];
-                        Destroy(cell.OccupyingBall.gameObject);
-                        cell.ClearBall();
+                
+                        if (cell.OccupyingBall != null)
+                        {
+                            Destroy(cell.OccupyingBall.gameObject);
+                        }
                     }
                 }
             }
-
-            // Ball container'daki tüm child'ları temizle (emin olmak için)
-            if (ballContainer != null)
-            {
-                foreach (Transform child in ballContainer)
-                {
-                    Destroy(child.gameObject);
-                }
-            }
-
-            // Grid array'ini sıfırla
-            _grid = null;
-
-            if (showDebugLogs)
-            {
-                Debug.Log("[GridManager] Grid cleared!");
-            }
-        }
-
-        private void OnDestroy()
-        {
-            _isDestroying = true;
         }
 
         private void OnDrawGizmos()

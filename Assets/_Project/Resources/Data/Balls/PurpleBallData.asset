@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Project.Scripts.Data.BallData
   ballColor: 4
   color: {r: 0.68179417, g: 0, b: 1, a: 1}
-  ballSprite: {fileID: 0}
+  ballSprite: {fileID: 21300000, guid: 07f35f8c69f907548a7ff7e7b4c68b03, type: 3}
   pointValue: 10
   spawnWeight: 1
